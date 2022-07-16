@@ -12,7 +12,7 @@ npm install requests-queue
 ## Usage
 
 ```js
-import { requestsQueue, RequestModel } from 'requests-queue';
+import { requestsQueue, RequestModel } from 'req-q';
 
 const yourURL = 'baseUrl';
 const yourEndpoints = ['firstEndpoint', 'secondEndpoint'];
