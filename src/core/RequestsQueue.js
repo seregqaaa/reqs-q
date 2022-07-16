@@ -1,5 +1,9 @@
 // Constants
-import { ERR_TIMEOUT, requestsStatuses } from '../global/constants.js';
+import {
+  ERR_TIMEOUT,
+  ERR_UNKNOWN_NETWORK_ERROR,
+  requestsStatuses,
+} from '../global/constants.js';
 
 // Models
 import { notRequestInstanceError, RequestModel } from '../models/Request.js';
@@ -124,9 +128,19 @@ class RequestsQueue {
         request.callback(),
         this.#throwTimeout(request.timeout),
       ]);
-      if (result === ERR_TIMEOUT) throw new Error(result);
+      if (
+        !result ||
+        result === ERR_TIMEOUT ||
+        !(result.status && result.status >= 200 && result.status <= 299)
+      ) {
+        throw (
+          (result instanceof Response ? result.statusText : result) ||
+          ERR_UNKNOWN_NETWORK_ERROR
+        );
+      }
       return result;
     } catch (e) {
+      console.error(e);
       const error = {
         retriesDone,
         isError: true,
