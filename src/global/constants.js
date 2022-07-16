@@ -18,3 +18,4 @@ export const requestsStatuses = {
 };
 
 export const ERR_TIMEOUT = 'ERR_TIMEOUT';
+export const ERR_UNKNOWN_NETWORK_ERROR = 'ERR_UNKNOWN_NETWORK_ERROR';
