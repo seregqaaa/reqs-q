@@ -1,6 +1,6 @@
-# req-q
+# reqs-q
 
-req-q is a simple and lightweight JavaScript library to help you control the
+reqs-q is a simple and lightweight JavaScript library to help you control the
 order of requests.
 
 ## Installation
