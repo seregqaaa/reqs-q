@@ -11,8 +11,6 @@ npm install requests-queue
 
 ## Usage
 
-p
-
 ```js
 import { requestsQueue, RequestModel } from 'requests-queue';
 
