@@ -209,11 +209,12 @@
     </main>
 
     <script type="module">
-      import { RequestModel, RequestsQueue } from './src/index.js';
+      import { RequestModel, RequestsQueue, QueueLogger } from './src/index.js';
 
-      const requestsQueue = new RequestsQueue();
-      RequestsQueue.showLogs = true;
-      RequestsQueue.saveLogs = true;
+      const requestsQueue = new RequestsQueue({
+        logger: new QueueLogger({ saveLogs: true }),
+      });
+      window.requestsQueue = requestsQueue;
 
       const button = document.querySelector('#req');
       const resultArea = document.querySelector('#area');
