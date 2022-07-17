@@ -17,7 +17,7 @@ export class RequestsQueue {
   static saveLogs = false;
   static logLimit = 50;
 
-  static #readOnlyError = new Error('Requests queue is read-only');
+  static #readOnlyError = new Error('This object is read-only');
 
   /**
    * @type {RequestsQueue}
@@ -59,17 +59,14 @@ export class RequestsQueue {
    * @returns {RequestModel[]} Read-only requests queue.
    */
   get queue() {
-    return new Proxy(this.#queue, {
-      get: (queue, propName) => {
-        if (this.#allowedPropNames.includes(propName)) {
-          return queue[propName];
-        }
-        throw RequestsQueue.#readOnlyError;
-      },
-      set: () => {
-        throw RequestsQueue.#readOnlyError;
-      },
-    });
+    return this.#protect(this.#queue);
+  }
+
+  /**
+   * @returns {Record<string, any>[]} Read-only logs.
+   */
+  get logs() {
+    return this.#protect(this.#logs);
   }
 
   // Methods
@@ -256,9 +253,28 @@ export class RequestsQueue {
       {},
     );
     logObj.timestamp = timestamp;
-    if (this.#logs.length + 1 === RequestsQueue.logLimit) {
+    if (this.#logs.length === RequestsQueue.logLimit) {
       this.#logs.pop();
     }
     this.#logs.unshift(logObj);
+  }
+
+  /**
+   * Protects provided object from changes.
+   *
+   * @param {any} object Object to be protected.
+   */
+  #protect(object) {
+    return new Proxy(object, {
+      get: (queue, propName) => {
+        if (this.#allowedPropNames.includes(propName)) {
+          return queue[propName];
+        }
+        throw RequestsQueue.#readOnlyError;
+      },
+      set: () => {
+        throw RequestsQueue.#readOnlyError;
+      },
+    });
   }
 }
