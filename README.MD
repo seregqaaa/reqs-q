@@ -55,17 +55,17 @@ const results = yourEndpoints.map(async endpoint => {
 
 - #### `RequestsQueue.showErrors: boolean`
 
-  - Adds provided request to the queue.
+  - Indicator whether show errors.
   - Default `true`.
 
 - #### `RequestsQueue.saveLogs: boolean`
 
-  - Adds provided request to the queue.
+  - Indicator whether save logs.
   - Default `false`.
 
 - #### `RequestsQueue.logsLimit: number`
 
-  - Adds provided request to the queue.
+  - Limit on the length of logs array.
   - Default `50`.
 
 ## License
