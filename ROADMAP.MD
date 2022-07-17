@@ -1,17 +1,15 @@
-# RequestsQueue Roadmap
+# reqs-q Roadmap
 
 - [ ] Core
   - [x] Create request and response models
   - [x] Realize core logic
-  - [ ] Service workes
-- [ ] Compress code
+  - [ ] Add configuration possibility
+  - [ ] Implement persisting queue
+  - [ ] Service workes (optional)
 - [ ] Logs
   - [ ] Show logs if required
-- [ ] Config
-  - [ ] Implement base config
-- [ ] Persisting
-  - [ ] Implement persisting queue
 - [ ] Add test cases
+- [ ] Add typescript or d.ts
 - [ ] Examples
   - [x] Create simple example
   - [ ] Create few working examples

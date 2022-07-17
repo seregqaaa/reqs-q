@@ -6,13 +6,13 @@ order of requests.
 ## Installation
 
 ```
-npm install requests-queue
+npm install reqs-q
 ```
 
 ## Usage
 
 ```js
-import { requestsQueue, RequestModel } from 'req-q';
+import { requestsQueue, RequestModel } from 'reqs-q';
 
 const yourURL = 'baseUrl';
 const yourEndpoints = ['firstEndpoint', 'secondEndpoint'];
