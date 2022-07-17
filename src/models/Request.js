@@ -1,5 +1,5 @@
 import { priorities, requestsStatuses } from '../global/constants.js';
-import { getUniqInt } from '../utils/number.js';
+import { getRandomString } from '../utils/string.js';
 
 /**
  *  Request model.
@@ -21,7 +21,7 @@ export class RequestModel {
    *    timestamps?: Timestamps
    * }} props Request parameters.
    */
-  constructor(props) {
+  constructor(props = { callback: () => ({}) }) {
     // self
     this.done = null;
     this.timestamps = new Timestamps(props.timestamps);
@@ -34,7 +34,7 @@ export class RequestModel {
     this.errors = props.errors ?? [];
     this.response = props.response ?? null;
     this.status = props.status ?? requestsStatuses.waiting;
-    this.id = props.id ?? getUniqInt();
+    this.id = props.id ?? getRandomString();
     this.timeout = props.timeout ?? 15_000;
     this.retryAfter = props.retryAfter ?? null;
     this.retriesCount = props.retriesCount ?? null;

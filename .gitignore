@@ -1,0 +1,4 @@
+example/**/*
+.DS_Store
+.vscode
+.idea
