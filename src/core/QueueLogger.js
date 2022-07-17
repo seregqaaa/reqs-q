@@ -1,3 +1,5 @@
+import { unlink } from '../utils/helpers.js';
+
 /**
  * Queue Logger class.
  */
@@ -44,7 +46,7 @@ export class QueueLogger {
    * @returns {void}
    */
   log(...data) {
-    const unlinkedData = JSON.parse(JSON.stringify(data));
+    const unlinkedData = unlink(data);
     const timestamp = Date.now();
     console.log(...unlinkedData, timestamp);
     if (!this.saveLogs) return;

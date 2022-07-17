@@ -11,30 +11,51 @@ npm install reqs-q
 
 ## Usage
 
-```js
-import { RequestsQueue, RequestModel } from 'reqs-q';
+- ### Base
 
-const yourURL = 'baseUrl';
-const yourEndpoints = ['firstEndpoint', 'secondEndpoint'];
+  ```js
+  import { RequestsQueueCore } from 'reqs-q';
 
-// !!! ASYNC !!!
-const requestsQueue = await RequestsQueue.init({
-  showLogs: true,
-});
+  const requestsQueue = new RequestsQueueCore();
 
-const results = yourEndpoints.map(async endpoint => {
-  const request = new RequestModel({
-    callback: () => fetch(`${yourURL}/${endpoint}`).then(r => r.json()),
-    timeout: 5000,
-    retryAfter: 2000,
-    retriesCount: 3,
-    priority: 4,
+  const yourURL = 'baseUrl';
+  const yourEndpoints = ['firstEndpoint', 'secondEndpoint'];
+
+  const results = yourEndpoints.map(async endpoint => {
+    const request = new RequestModel({
+      callback: () => fetch(`${yourURL}/${endpoint}`).then(r => r.json()),
+    });
+
+    const result = await requestsQueue.request(request);
+    return result.response;
+  });
+  ```
+
+- ### Advanced
+
+  ```js
+  import { RequestsQueue, RequestModel, QueueLogger } from 'reqs-q';
+
+  const requestsQueue = new RequestsQueue({
+    logger: new QueueLogger({ saveLogs: true }),
   });
 
-  const result = await requestsQueue.request(request);
-  return result.response;
-});
-```
+  const yourURL = 'baseUrl';
+  const yourEndpoints = ['firstEndpoint', 'secondEndpoint'];
+
+  const results = yourEndpoints.map(async endpoint => {
+    const request = new RequestModel({
+      callback: () => fetch(`${yourURL}/${endpoint}`).then(r => r.json()),
+      timeout: 5000,
+      retryAfter: 2000,
+      retriesCount: 3,
+      priority: 4,
+    });
+
+    const result = await requestsQueue.request(request);
+    return result.response;
+  });
+  ```
 
 ## API
 
@@ -49,26 +70,6 @@ const results = yourEndpoints.map(async endpoint => {
 - #### `RequestsQueue.prototype.logs: Record<string, any>[]`
 
   - Returns read-only logs.
-
-- #### `RequestsQueue.showLogs: boolean`
-
-  - Indicator whether show logs.
-  - Default `false`.
-
-- #### `RequestsQueue.showErrors: boolean`
-
-  - Indicator whether show errors.
-  - Default `true`.
-
-- #### `RequestsQueue.saveLogs: boolean`
-
-  - Indicator whether save logs.
-  - Default `false`.
-
-- #### `RequestsQueue.logsLimit: number`
-
-  - Limit on the length of logs array.
-  - Default `50`.
 
 ## License
 

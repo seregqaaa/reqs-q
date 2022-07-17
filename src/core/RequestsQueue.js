@@ -43,7 +43,7 @@ export class RequestsQueueCore {
       request.done = r;
     });
     this.#queue.push(request);
-    this.#log('Request has been added to the queue', request);
+    this.log('Request has been added to the queue', request);
     if (!this.#isQueueBusy) this.#handleQueue();
     return promise;
   }
@@ -58,20 +58,20 @@ export class RequestsQueueCore {
     const queue = this.#queue;
     if (queue.length === 0) {
       this.#isQueueBusy = false;
-      this.#log('Queue is empty, waiting for new requests...');
+      this.log('Queue is empty, waiting for new requests...');
       return;
     }
 
     this.#isQueueBusy = true;
     queue.sort((a, b) => b.priority - a.priority);
 
-    this.#log('Queue has been sorted by request priority', queue);
+    this.log('Queue has been sorted by request priority', queue);
 
-    const currentRequest = queue.shift();
-    await this.#handleRequest(currentRequest);
+    await this.#handleRequest(queue[0]);
+    queue.shift();
 
     if (queue.length > 0) {
-      this.#log(
+      this.log(
         `${queue.length} request${
           queue.length === 1 ? '' : 's'
         } left in the queue`,
@@ -91,7 +91,7 @@ export class RequestsQueueCore {
   async #handleRequest(request) {
     request.timestamps.startedAt = Date.now();
 
-    this.#log('New request starts executing', request);
+    this.log('New request starts executing', request);
 
     const response = await this.#getResponse(request);
     request.timestamps.doneAt = Date.now();
@@ -125,9 +125,9 @@ export class RequestsQueueCore {
       retriesDone < request.retriesCount;
 
     if (shouldRetry) {
-      this.#log(`Retrying: attempt ${retriesDone}`, request);
+      this.log(`Retrying: attempt ${retriesDone}`, request);
     } else {
-      this.#log(
+      this.log(
         `Request has been ${response.isError ? 'failed' : 'completed'}`,
         request,
       );
@@ -146,7 +146,7 @@ export class RequestsQueueCore {
    * @returns {Promise<Record<string, any>>} Request result.
    */
   async #makeRequest(request, retriesDone = 0) {
-    this.#log(`Request in progress: attempt ${retriesDone}`, request);
+    this.log(`Request in progress: attempt ${retriesDone}`, request);
 
     try {
       const result = await Promise.race([
@@ -167,7 +167,7 @@ export class RequestsQueueCore {
 
       return result;
     } catch (e) {
-      if (RequestsQueue.showErrors) {
+      if (this.showErrors) {
         console.error(e);
       }
       const error = {
@@ -191,20 +191,17 @@ export class RequestsQueueCore {
     return new Promise((_, r) => setTimeout(() => r(ERR_TIMEOUT), timeout));
   }
 
-  #log() {}
+  log() {}
 }
 
 /**
  * Requests queue class.
  */
 export class RequestsQueue extends RequestsQueueCore {
-  static showErrors = true;
-  static showLogs = false;
-  static saveLogs = false;
-  static logLimit = 50;
-
-  static #readOnlyError = new Error('This object is read-only');
-
+  /**
+   * @type {Error}
+   */
+  #readOnlyError = new Error('This object is read-only');
   /**
    * @type {RequestModel[]}
    */
@@ -212,8 +209,7 @@ export class RequestsQueue extends RequestsQueueCore {
   /**
    * @type {string[]}
    */
-  #allowedPropNames;
-
+  #allowedPropNames = ['length'];
   #logger;
 
   /**
@@ -221,11 +217,12 @@ export class RequestsQueue extends RequestsQueueCore {
    *
    * @param {{
    *    logger?: QueueLogger
-   * }} params RequestsQueue parameters.
+   *    showErrors?: boolean
+   * }} params `RequestsQueue` parameters.
    */
   constructor(params = {}) {
     super();
-    this.#allowedPropNames = ['length'];
+    this.showErrors = params.showErrors ?? true;
     this.#logger = params.logger ?? null;
   }
 
@@ -240,52 +237,21 @@ export class RequestsQueue extends RequestsQueueCore {
    * @returns {Record<string, any>[]} Read-only logs.
    */
   get logs() {
+    if (!this.#logger) {
+      throw new Error('Logger was not provided when the instance was created');
+    }
     return this.#protect(this.#logger.logs);
   }
 
   /**
-   * Initializes `RequestsQueue` class.
-   *
-   * @param {{
-   *    showLogs?: boolean
-   *    showErrors?: boolean
-   *    saveLogs?: boolean
-   *    logLimit?: boolean
-   * }} params
-   * @returns {Promise<RequestsQueue>}
-   */
-  static async init(params) {
-    const instanceParams = {};
-    const paramsEntries = Object.entries(params);
-
-    for (const [key, val] of paramsEntries) {
-      const classValue = RequestsQueue[key];
-      if (classValue !== undefined && typeof classValue === typeof val) {
-        RequestsQueue[key] = val;
-      }
-    }
-
-    if (RequestsQueue.showLogs) {
-      const { QueueLogger } = await import('./QueueLogger.js');
-
-      instanceParams.logger = new QueueLogger({
-        logLimit: RequestsQueue.logLimit,
-        saveLogs: RequestsQueue.saveLogs,
-      });
-    }
-
-    return new RequestsQueue(instanceParams);
-  }
-
-  /**
    * Displays provided data in the console.
-   * Saves logs if `RequestsQueue.saveLogs` is enabled.
+   * Saves logs if `this.#logger` exists.
    *
    * @param  {...any} data Data to be logged.
    * @returns {void}
    */
-  #log(...data) {
-    if (!RequestsQueue.showLogs || !this.#logger) return;
+  log(...data) {
+    if (!this.#logger) return;
     this.#logger.log(...data);
   }
 
@@ -300,10 +266,10 @@ export class RequestsQueue extends RequestsQueueCore {
         if (this.#allowedPropNames.includes(propName)) {
           return queue[propName];
         }
-        throw RequestsQueue.#readOnlyError;
+        throw this.#readOnlyError;
       },
       set: () => {
-        throw RequestsQueue.#readOnlyError;
+        throw this.#readOnlyError;
       },
     });
   }
