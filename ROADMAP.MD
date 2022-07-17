@@ -6,11 +6,11 @@
   - [x] Add base configuration possibility
   - [ ] Implement persisting queue
   - [ ] Service workes (optional)
-- [ ] Docs
+- [x] Docs
   - [x] Code docs
-  - [ ] API
-- [ ] Logs
-  - [ ] Show logs if required
+  - [x] API
+- [x] Logs
+  - [x] Show logs if required
 - [ ] Add test cases
 - [ ] Add typescript or d.ts
 - [ ] Examples
