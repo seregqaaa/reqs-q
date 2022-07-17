@@ -3,9 +3,12 @@
 - [ ] Core
   - [x] Create request and response models
   - [x] Realize core logic
-  - [ ] Add configuration possibility
+  - [x] Add base configuration possibility
   - [ ] Implement persisting queue
   - [ ] Service workes (optional)
+- [ ] Docs
+  - [x] Code docs
+  - [ ] API
 - [ ] Logs
   - [ ] Show logs if required
 - [ ] Add test cases

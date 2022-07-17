@@ -209,7 +209,11 @@
     </main>
 
     <script type="module">
-      import { RequestModel, requestsQueue } from '../src/index.js';
+      import { RequestModel, RequestsQueue } from '../src/index.js';
+
+      const requestsQueue = new RequestsQueue();
+      RequestsQueue.showLogs = true;
+      RequestsQueue.saveLogs = true;
 
       const button = document.querySelector('#req');
       const resultArea = document.querySelector('#area');
@@ -241,33 +245,11 @@
           const request = new RequestModel({
             callback: () =>
               fetch(`${url}/${endpoint}${baseUrl === url ? query : ''}`),
+            retryAfter: 1000,
+            retriesCount: 2,
           });
           const result = await requestsQueue.request(request);
-          const json = result.response?.json
-            ? await result.response.json()
-            : result;
-          const displayData = Array.isArray(json)
-            ? json.map(element =>
-                Object.entries(element)
-                  .filter(([, value]) => typeof value !== 'object')
-                  .reduce(
-                    (obj, [key, val]) => ({
-                      ...obj,
-                      [key]:
-                        typeof val === 'string' && val.length > 30
-                          ? val.slice(0, 30)
-                          : val,
-                    }),
-                    {},
-                  ),
-              )
-            : result;
-          resultArea.value += `${endpoint} ${JSON.stringify(
-            displayData,
-            null,
-            2,
-          )}\n\n`;
-          console.log(endpoint, json);
+          handleResult(result, endpoint);
         }
       });
 
@@ -292,6 +274,37 @@
           disableButton('Endpoints must be in JSON format');
         }
       });
+
+      async function handleResult(result, endpoint) {
+        const json = result.response?.json
+          ? await result.response.json()
+          : result;
+
+        const displayData = Array.isArray(json)
+          ? json.map(element =>
+              Object.entries(element)
+                .filter(([, value]) => typeof value !== 'object')
+                .reduce(
+                  (obj, [key, val]) => ({
+                    ...obj,
+                    [key]:
+                      typeof val === 'string' && val.length > 30
+                        ? val.slice(0, 30)
+                        : val,
+                  }),
+                  {},
+                ),
+            )
+          : result;
+
+        resultArea.value += `${endpoint} ${JSON.stringify(
+          displayData,
+          null,
+          2,
+        )}\n\n`;
+
+        console.log(endpoint, json);
+      }
 
       function disableButton(text) {
         button.setAttribute('disabled', true);
