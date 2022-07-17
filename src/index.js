@@ -1,4 +1,4 @@
 import { RequestModel } from './models/Request.js';
-import { RequestsQueue } from './core/RequestsQueue.js';
+import { RequestsQueue, RequestsQueueCore } from './core/RequestsQueue.js';
 
-export { RequestModel, RequestsQueue };
+export { RequestModel, RequestsQueue, RequestsQueueCore };

@@ -9,67 +9,26 @@ import {
 import { notRequestInstanceError, RequestModel } from '../models/Request.js';
 
 /**
- * Requests queue class.
+ * Core class of Requests Queue.
  */
-export class RequestsQueue {
-  static showErrors = true;
-  static showLogs = false;
-  static saveLogs = false;
-  static logLimit = 50;
-
-  static #readOnlyError = new Error('This object is read-only');
-
-  /**
-   * @type {RequestsQueue}
-   */
-  static #instance;
-
+export class RequestsQueueCore {
   /**
    * @type {RequestModel[]}
    */
   #queue;
-  /**
-   * @type {string[]}
-   */
-  #allowedPropNames;
-  /**
-   * @type {any[]}
-   */
-  #logs;
 
   /**
-   * Returns an instance of the Requests Queue, or creates one if not already
-   * created.
+   * @type {boolean}
+   */
+  #isQueueBusy;
+
+  /**
+   * Creates new instance of `RequestsQueueCore` class.
    */
   constructor() {
     this.#queue = [];
-    this.#logs = [];
-    this.#allowedPropNames = ['length'];
-    this.isQueueBusy = false;
-
-    if (!RequestsQueue.#instance) {
-      RequestsQueue.#instance = this;
-      this.#log('Requests Queue initialized');
-    }
-    return RequestsQueue.#instance;
+    this.#isQueueBusy = false;
   }
-
-  // Getters
-  /**
-   * @returns {RequestModel[]} Read-only requests queue.
-   */
-  get queue() {
-    return this.#protect(this.#queue);
-  }
-
-  /**
-   * @returns {Record<string, any>[]} Read-only logs.
-   */
-  get logs() {
-    return this.#protect(this.#logs);
-  }
-
-  // Methods
 
   /**
    * Adds provided request to the queue.
@@ -85,7 +44,7 @@ export class RequestsQueue {
     });
     this.#queue.push(request);
     this.#log('Request has been added to the queue', request);
-    if (!this.isQueueBusy) this.#handleQueue();
+    if (!this.#isQueueBusy) this.#handleQueue();
     return promise;
   }
 
@@ -98,12 +57,12 @@ export class RequestsQueue {
   async #handleQueue() {
     const queue = this.#queue;
     if (queue.length === 0) {
-      this.isQueueBusy = false;
+      this.#isQueueBusy = false;
       this.#log('Queue is empty, waiting for new requests...');
       return;
     }
 
-    this.isQueueBusy = true;
+    this.#isQueueBusy = true;
     queue.sort((a, b) => b.priority - a.priority);
 
     this.#log('Queue has been sorted by request priority', queue);
@@ -232,6 +191,92 @@ export class RequestsQueue {
     return new Promise((_, r) => setTimeout(() => r(ERR_TIMEOUT), timeout));
   }
 
+  #log() {}
+}
+
+/**
+ * Requests queue class.
+ */
+export class RequestsQueue extends RequestsQueueCore {
+  static showErrors = true;
+  static showLogs = false;
+  static saveLogs = false;
+  static logLimit = 50;
+
+  static #readOnlyError = new Error('This object is read-only');
+
+  /**
+   * @type {RequestModel[]}
+   */
+  #queue;
+  /**
+   * @type {string[]}
+   */
+  #allowedPropNames;
+
+  #logger;
+
+  /**
+   * Creates new instance of `RequestsQueue` class.
+   *
+   * @param {{
+   *    logger?: QueueLogger
+   * }} params RequestsQueue parameters.
+   */
+  constructor(params = {}) {
+    super();
+    this.#allowedPropNames = ['length'];
+    this.#logger = params.logger ?? null;
+  }
+
+  /**
+   * @returns {RequestModel[]} Read-only requests queue.
+   */
+  get queue() {
+    return this.#protect(this.#queue);
+  }
+
+  /**
+   * @returns {Record<string, any>[]} Read-only logs.
+   */
+  get logs() {
+    return this.#protect(this.#logger.logs);
+  }
+
+  /**
+   * Initializes `RequestsQueue` class.
+   *
+   * @param {{
+   *    showLogs?: boolean
+   *    showErrors?: boolean
+   *    saveLogs?: boolean
+   *    logLimit?: boolean
+   * }} params
+   * @returns {Promise<RequestsQueue>}
+   */
+  static async init(params) {
+    const instanceParams = {};
+    const paramsEntries = Object.entries(params);
+
+    for (const [key, val] of paramsEntries) {
+      const classValue = RequestsQueue[key];
+      if (classValue !== undefined && typeof classValue === typeof val) {
+        RequestsQueue[key] = val;
+      }
+    }
+
+    if (RequestsQueue.showLogs) {
+      const { QueueLogger } = await import('./QueueLogger.js');
+
+      instanceParams.logger = new QueueLogger({
+        logLimit: RequestsQueue.logLimit,
+        saveLogs: RequestsQueue.saveLogs,
+      });
+    }
+
+    return new RequestsQueue(instanceParams);
+  }
+
   /**
    * Displays provided data in the console.
    * Saves logs if `RequestsQueue.saveLogs` is enabled.
@@ -240,23 +285,8 @@ export class RequestsQueue {
    * @returns {void}
    */
   #log(...data) {
-    if (!RequestsQueue.showLogs) return;
-    const unlinkedData = JSON.parse(JSON.stringify(data));
-    const timestamp = Date.now();
-    console.log(...unlinkedData, timestamp);
-    if (!RequestsQueue.saveLogs) return;
-    const logObj = Object.entries(unlinkedData).reduce(
-      (logObj, [key, val]) => ({
-        ...logObj,
-        [key]: val,
-      }),
-      {},
-    );
-    logObj.timestamp = timestamp;
-    if (this.#logs.length === RequestsQueue.logLimit) {
-      this.#logs.pop();
-    }
-    this.#logs.unshift(logObj);
+    if (!RequestsQueue.showLogs || !this.#logger) return;
+    this.#logger.log(...data);
   }
 
   /**

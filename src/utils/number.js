@@ -1,10 +1,7 @@
-export function* infinite() {
-  let i = 0;
-  while (true) {
-    return ++i;
-  }
+export function getRandomFloat(max = 2 ** 48) {
+  return Math.random() * max;
 }
 
-export function getUniqInt() {
-  return infinite().next().value;
+export function getRandomInt(max = 2 ** 48) {
+  return Math.ceil(getRandomFloat(max));
 }

@@ -17,8 +17,10 @@ import { RequestsQueue, RequestModel } from 'reqs-q';
 const yourURL = 'baseUrl';
 const yourEndpoints = ['firstEndpoint', 'secondEndpoint'];
 
-RequestsQueue.showLogs = true;
-const requestsQueue = new RequestsQueue();
+// !!! ASYNC !!!
+const requestsQueue = await RequestsQueue.init({
+  showLogs: true,
+});
 
 const results = yourEndpoints.map(async endpoint => {
   const request = new RequestModel({
