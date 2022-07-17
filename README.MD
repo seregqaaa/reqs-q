@@ -36,34 +36,34 @@ const results = yourEndpoints.map(async endpoint => {
 
 ## API
 
-- ### `RequestsQueue.prototype.request(request: RequestModel): Promise<RequestModel>`
+- #### `RequestsQueue.prototype.request(request: RequestModel): Promise<RequestModel>`
 
   - Adds provided request to the queue.
 
-- ### `RequestsQueue.prototype.queue: RequestsQueue[]`
+- #### `RequestsQueue.prototype.queue: RequestsQueue[]`
 
   - Returns read-only requests queue.
 
-- ### `RequestsQueue.prototype.logs: Record<string, any>[]`
+- #### `RequestsQueue.prototype.logs: Record<string, any>[]`
 
   - Returns read-only logs.
 
-- ### `RequestsQueue.showLogs: boolean`
+- #### `RequestsQueue.showLogs: boolean`
 
   - Indicator whether show logs.
   - Default `false`.
 
-- ### `RequestsQueue.showErrors: boolean`
+- #### `RequestsQueue.showErrors: boolean`
 
   - Adds provided request to the queue.
   - Default `true`.
 
-- ### `RequestsQueue.saveLogs: boolean`
+- #### `RequestsQueue.saveLogs: boolean`
 
   - Adds provided request to the queue.
   - Default `false`.
 
-- ### `RequestsQueue.logsLimit: number`
+- #### `RequestsQueue.logsLimit: number`
 
   - Adds provided request to the queue.
   - Default `50`.
