@@ -16,6 +16,10 @@ export class QueueStoreManager {
    */
   #store;
   #restoreObject;
+  /**
+   * @type {boolean}
+   */
+  #showWarn;
 
   /**
    * Creates new instance of `QueueStoreManager` class.
@@ -23,11 +27,13 @@ export class QueueStoreManager {
    * @param {{
    *    restoreObject: any
    *    store?: keyof stores,
+   *    showWarn?: boolean
    * }} params `QueueStoreManager` parameters.
    */
   constructor(params = {}) {
     this.#store = params.store ?? stores.localStorage;
     this.#restoreObject = params.restoreObject ?? null;
+    this.#showWarn = params.showWarn ?? true;
   }
 
   /**
@@ -100,7 +106,7 @@ export class QueueStoreManager {
     );
     const mappedQueue = filteredQueue.map(item => ({
       actionPath: item.actionPath,
-      args: item.args,
+      args: this.#checkArgsSafety(item.args),
     }));
     return mappedQueue;
   }
@@ -113,6 +119,7 @@ export class QueueStoreManager {
   #prepareForStore(queue) {
     const mappedQueue = queue.map(r => ({
       ...r.propsToStore,
+      args: this.#checkArgsSafety(r.propsToStore.args),
       timestamp: Date.now(),
     }));
     const filteredQueue = mappedQueue.filter(
@@ -121,5 +128,24 @@ export class QueueStoreManager {
     const stringifiedQueue = JSON.stringify(filteredQueue);
     const encodedQueue = encodeb64(stringifiedQueue);
     return encodedQueue;
+  }
+
+  /**
+   * Checks action arguments for safety.
+   *
+   * @param {any[]} args Arguments to be checked.
+   */
+  #checkArgsSafety(args) {
+    return this.#showWarn
+      ? args.map(arg => {
+          try {
+            new URL(arg);
+            console.warn(`Saving argument "${arg}" may be not safe`);
+          } catch (_) {
+          } finally {
+            return arg;
+          }
+        })
+      : args;
   }
 }
