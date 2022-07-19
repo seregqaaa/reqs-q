@@ -1,6 +1,6 @@
 {
   "name": "reqs-q",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "reqs-q is a simple and lightweight JavaScript library to help you control the order of requests",
   "keywords": [
     "requests queue",
