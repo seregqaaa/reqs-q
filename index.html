@@ -177,7 +177,7 @@
             class="link"
             target="_blank"
           >
-            <img src="./assets/images/gh-logo.png" alt="github" />
+            <img src="assets/images/gh-logo.png" alt="github" />
           </a>
         </li>
         <li class="link-item">
@@ -186,7 +186,7 @@
             class="link"
             target="_blank"
           >
-            <img src="./assets/images/npm-logo.png" alt="npm" />
+            <img src="assets/images/npm-logo.png" alt="npm" />
           </a>
         </li>
       </ul>
@@ -209,10 +209,24 @@
     </main>
 
     <script type="module">
-      import { RequestModel, RequestsQueue, QueueLogger } from './src/index.js';
+      import {
+        RequestModel,
+        RequestsQueue,
+        QueueLogger,
+        QueueStoreManager,
+        stores,
+      } from '../src/index.js';
+
+      const apiManager = {
+        sendRequest,
+      };
 
       const requestsQueue = new RequestsQueue({
-        logger: new QueueLogger({ saveLogs: true }),
+        logger: new QueueLogger({ saveLogs: false, showLogs: true }),
+        storeManager: new QueueStoreManager({
+          store: stores.localStorage,
+          restoreObject: apiManager,
+        }),
       });
       window.requestsQueue = requestsQueue;
 
@@ -236,21 +250,14 @@
       let isUrlInvalid = false;
       let isEndpointsInvalid = false;
 
-      button.addEventListener('click', async e => {
+      button.addEventListener('click', e => {
         if (e.target.disabled) return;
         resultArea.value = '';
         const query = '?_start=0&_limit=2';
         const endpoints = JSON.parse(endpointsArea.value) ?? baseEndpoints;
         const url = urlArea.value ?? baseUrl;
         for (const endpoint of endpoints) {
-          const request = new RequestModel({
-            callback: () =>
-              fetch(`${url}/${endpoint}${baseUrl === url ? query : ''}`),
-            retryAfter: 1000,
-            retriesCount: 2,
-          });
-          const result = await requestsQueue.request(request);
-          handleResult(result, endpoint);
+          sendRequest(url, endpoint, baseUrl, query);
         }
       });
 
@@ -275,6 +282,22 @@
           disableButton('Endpoints must be in JSON format');
         }
       });
+
+      function sendRequest(url, endpoint, baseUrl, query) {
+        const request = new RequestModel({
+          callback: () =>
+            fetch(`${url}/${endpoint}${baseUrl === url ? query : ''}`),
+          retryAfter: 1000,
+          retriesCount: 2,
+          propsToStore: {
+            actionPath: sendRequest.name,
+            args: [...arguments],
+          },
+        });
+        requestsQueue
+          .request(request)
+          .then(result => handleResult(result, endpoint));
+      }
 
       async function handleResult(result, endpoint) {
         const json = result.response?.json
