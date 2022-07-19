@@ -18,12 +18,12 @@ npm install reqs-q
 
   const requestsQueue = new RequestsQueueCore();
 
-  const yourURL = 'baseUrl';
-  const yourEndpoints = ['firstEndpoint', 'secondEndpoint'];
+  const myURL = 'baseUrl';
+  const myEndpoints = ['firstEndpoint', 'secondEndpoint'];
 
-  const results = yourEndpoints.map(async endpoint => {
+  const results = myEndpoints.map(async endpoint => {
     const request = new RequestModel({
-      callback: () => fetch(`${yourURL}/${endpoint}`).then(r => r.json()),
+      callback: () => fetch(`${myURL}/${endpoint}`).then(r => r.json()),
     });
 
     const result = await requestsQueue.request(request);
@@ -34,27 +34,50 @@ npm install reqs-q
 - ### Advanced
 
   ```js
-  import { RequestsQueue, RequestModel, QueueLogger } from 'reqs-q';
+  import {
+    RequestsQueue,
+    RequestModel,
+    QueueLogger,
+    QueueStoreManager,
+    stores,
+  } from 'reqs-q';
 
-  const requestsQueue = new RequestsQueue({
-    logger: new QueueLogger({ saveLogs: true }),
-  });
-
-  const yourURL = 'baseUrl';
-  const yourEndpoints = ['firstEndpoint', 'secondEndpoint'];
-
-  const results = yourEndpoints.map(async endpoint => {
-    const request = new RequestModel({
-      callback: () => fetch(`${yourURL}/${endpoint}`).then(r => r.json()),
+  function sendRequest(endpoint) {
+    const newRequest = new RequestModel({
+      callback: () => fetch(`${myURL}/${endpoint}`).then(r => r.json()),
       timeout: 5000,
       retryAfter: 2000,
       retriesCount: 3,
       priority: 4,
+      propsToStore: {
+        actionPath: sendRequest.name,
+        args: [...arguments],
+      },
     });
 
-    const result = await requestsQueue.request(request);
-    return result.response;
+    requestsQueue.request(newRequest).then(console.log);
+  }
+
+  const myApiManager = {
+    sendRequest,
+  };
+  const myURL = 'baseUrl';
+  const myEndpoints = ['firstEndpoint', 'secondEndpoint'];
+
+  const requestsQueue = new RequestsQueue({
+    logger: new QueueLogger({ saveLogs: true, showLogs: true }),
+
+    // using this feature may be not safe.
+    storeManager: new QueueStoreManager({
+      store: stores.localStorage,
+      restoreObject: myApiManager,
+      showWarn: true,
+    }),
   });
+
+  for (const enpdoint of myEndpoints) {
+    myApiManager.sendRequest(endpoint);
+  }
   ```
 
 ## API
