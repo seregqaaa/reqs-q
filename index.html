@@ -157,18 +157,28 @@
         font-size: 20px;
       }
 
+      #version-title {
+        position: absolute;
+        bottom: 10px;
+        right: 15px;
+        opacity: 0.5;
+      }
+
       #req,
       #area,
       #input,
       #url,
       p,
-      h1 {
+      h1,
+      h3 {
         font-family: JetBrains Mono, JetBrains Mono NL, consolas, Arial,
           sans-serif;
       }
     </style>
   </head>
   <body>
+    <h3 id="version-title">v0.1.5</h3>
+
     <header class="header">
       <ul class="link-items">
         <li class="link-item">
@@ -215,7 +225,7 @@
         QueueLogger,
         QueueStoreManager,
         stores,
-      } from '../src/index.js';
+      } from './src/index.js';
 
       const apiManager = {
         sendRequest,
