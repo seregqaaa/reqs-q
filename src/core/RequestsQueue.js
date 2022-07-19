@@ -5,6 +5,9 @@ import {
   requestsStatuses,
 } from '../global/constants.js';
 
+// Utils
+import { unlink } from '../utils/helpers.js';
+
 // Models
 import { notRequestInstanceError, RequestModel } from '../models/Request.js';
 
@@ -67,8 +70,10 @@ export class RequestsQueueCore {
 
     this.log('Queue has been sorted by request priority', queue);
 
+    this.save(queue);
     await this.#handleRequest(queue[0]);
     queue.shift();
+    this.save(queue);
 
     if (queue.length > 0) {
       this.log(
@@ -192,6 +197,7 @@ export class RequestsQueueCore {
   }
 
   log() {}
+  save() {}
 }
 
 /**
@@ -210,13 +216,21 @@ export class RequestsQueue extends RequestsQueueCore {
    * @type {string[]}
    */
   #allowedPropNames = ['length'];
+  /**
+   * @type {QueueLogger}
+   */
   #logger;
+  /**
+   * @type {QueueStoreManager}
+   */
+  #storeManager;
 
   /**
    * Creates new instance of `RequestsQueue` class.
    *
    * @param {{
    *    logger?: QueueLogger
+   *    storeManager?: QueueStoreManager
    *    showErrors?: boolean
    * }} params `RequestsQueue` parameters.
    */
@@ -224,6 +238,7 @@ export class RequestsQueue extends RequestsQueueCore {
     super();
     this.showErrors = params.showErrors ?? true;
     this.#logger = params.logger ?? null;
+    this.#storeManager = params.storeManager ?? null;
   }
 
   /**
@@ -253,6 +268,37 @@ export class RequestsQueue extends RequestsQueueCore {
   log(...data) {
     if (!this.#logger) return;
     this.#logger.log(...data);
+  }
+
+  /**
+   * Saves queue with `QueueStoreManager`.
+   *
+   * @param {RequestModel[]} queue Queue to be stored.
+   * @returns {void}
+   */
+  save(queue) {
+    if (!this.#storeManager) return;
+    this.#storeManager.save(unlink(queue));
+  }
+
+  /**
+   * Loads queue with `QueueStoreManager`.
+   *
+   * @returns {{ actionPath: string, args: any[] }[]}
+   */
+  load() {
+    if (!this.#storeManager) return;
+    return this.#storeManager.load();
+  }
+
+  /**
+   * Restarts queue.
+   *
+   * @returns {Promise<any[] | undefined>}
+   */
+  async restart() {
+    if (!this.#storeManager) return;
+    return await this.#storeManager.restart();
   }
 
   /**

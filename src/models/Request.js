@@ -10,15 +10,20 @@ export class RequestModel {
    *
    * @param {{
    *    callback: Promise<Function>
-   *    id?: number|string
+   *    errors?: any[]
+   *    status?: string
    *    timeout?: number
+   *    priority?: number
+   *    id?: number|string
+   *    timestamps?: Timestamps
    *    retryAfter?: number | null
    *    retriesCount?: number | null
-   *    priority?: number
    *    response?: Record<string, any> | null
-   *    status?: string
-   *    errors?: any[]
-   *    timestamps?: Timestamps
+   *    propsToStore?: {
+   *      actionPath: string
+   *      args: any[]
+   *      storageDuration?: number
+   *    }
    * }} props Request parameters.
    */
   constructor(props = { callback: () => ({}) }) {
@@ -32,13 +37,18 @@ export class RequestModel {
 
     // not-required
     this.errors = props.errors ?? [];
-    this.response = props.response ?? null;
-    this.status = props.status ?? requestsStatuses.waiting;
-    this.id = props.id ?? getRandomString();
     this.timeout = props.timeout ?? 15_000;
+    this.response = props.response ?? null;
+    this.id = props.id ?? getRandomString();
     this.retryAfter = props.retryAfter ?? null;
     this.retriesCount = props.retriesCount ?? null;
+    this.propsToStore = props.propsToStore ?? {};
     this.priority = props.priority ?? priorities.low;
+    this.status = props.status ?? requestsStatuses.waiting;
+
+    this.propsToStore.storageDuration = this.propsToStore.storageDuration
+      ? this.propsToStore.storageDuration
+      : 1000 * 60 * 60;
   }
 }
 
