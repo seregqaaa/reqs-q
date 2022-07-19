@@ -1,16 +1,20 @@
 # reqs-q Roadmap
 
-- [ ] Core
-  - [x] Create request and response models
-  - [x] Realize core logic
+- [x] Core
+  - [x] Implement core logic
+  - [x] Create request model
+  - [x] Create queue model
   - [x] Add base configuration possibility
-  - [ ] Implement persisting queue
-  - [ ] Service workes (optional)
+  - [ ] Service workers (optional)
+- [x] Models
+  - [x] `QueueLogger`
+  - [x] `QueueStoreManager`
 - [x] Docs
   - [x] Code docs
-  - [x] API
-- [x] Logs
-  - [x] Show logs if required
+  - [x] Core API
+  - [ ] Models API
+  - [ ] Store manager API
+  - [ ] Logger API
 - [ ] Add test cases
 - [ ] Add typescript or d.ts
 - [ ] Examples

@@ -16,6 +16,10 @@ export class QueueLogger {
    * @type {boolean}
    */
   #saveLogs;
+  /**
+   * @type {boolean}
+   */
+  #showLogs;
 
   /**
    * Creates new instance of `QueueLogger` class.
@@ -23,12 +27,14 @@ export class QueueLogger {
    * @param {{
    *  logLimit?: number
    *  saveLogs?: boolean
+   *  showLogs?: boolean
    * }} props
    */
   constructor(props = {}) {
     this.#logs = [];
     this.#logLimit = props.logLimit ?? 50;
     this.#saveLogs = props.saveLogs ?? false;
+    this.#showLogs = props.showLogs ?? false;
   }
 
   /**
@@ -48,8 +54,8 @@ export class QueueLogger {
   log(...data) {
     const unlinkedData = unlink(data);
     const timestamp = Date.now();
-    console.log(...unlinkedData, timestamp);
-    if (!this.saveLogs) return;
+    if (this.#showLogs) console.log(...unlinkedData, timestamp);
+    if (!this.#saveLogs) return;
     const logObj = Object.entries(unlinkedData).reduce(
       (logObj, [key, val]) => ({
         ...logObj,
