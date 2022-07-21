@@ -9,7 +9,7 @@ export const stores = {
  * Queue Store Manager class.
  */
 export class QueueStoreManager {
-  static LOCAL_STORAGE_KEY = '__reqs-q-v0.1.5__';
+  static LOCAL_STORAGE_KEY = '__reqs-q-v1.0.0__';
 
   /**
    * @type {keyof stores}
@@ -20,20 +20,26 @@ export class QueueStoreManager {
    * @type {boolean}
    */
   #showWarn;
+  /**
+   * @type {boolean}
+   */
+  #shouldEncode;
 
   /**
    * Creates new instance of `QueueStoreManager` class.
    *
    * @param {{
    *    restoreObject: any
-   *    store?: keyof stores,
+   *    store?: keyof stores
    *    showWarn?: boolean
+   *    shouldEncode?: boolean
    * }} params `QueueStoreManager` parameters.
    */
   constructor(params = {}) {
     this.#store = params.store ?? stores.localStorage;
     this.#restoreObject = params.restoreObject ?? null;
     this.#showWarn = params.showWarn ?? true;
+    this.#shouldEncode = params.shouldEncode ?? true;
   }
 
   /**
@@ -99,7 +105,9 @@ export class QueueStoreManager {
   #loadFromLocalStorage() {
     const localStorageQueue =
       localStorage.getItem(QueueStoreManager.LOCAL_STORAGE_KEY) ?? '[]';
-    const decodedQueue = decodeb64(localStorageQueue);
+    const decodedQueue = this.#shouldEncode
+      ? decodeb64(localStorageQueue)
+      : localStorageQueue;
     const parsedQueue = JSON.parse(decodedQueue);
     const filteredQueue = parsedQueue.filter(
       item => item.timestamp + item.storageDuration >= Date.now(),
@@ -118,15 +126,17 @@ export class QueueStoreManager {
    */
   #prepareForStore(queue) {
     const mappedQueue = queue.map(r => ({
-      ...r.propsToStore,
-      args: this.#checkArgsSafety(r.propsToStore.args),
+      ...r.storeData,
+      args: this.#checkArgsSafety(r.storeData.args ?? []),
       timestamp: Date.now(),
     }));
     const filteredQueue = mappedQueue.filter(
       item => Object.keys(item).length > 2,
     );
     const stringifiedQueue = JSON.stringify(filteredQueue);
-    const encodedQueue = encodeb64(stringifiedQueue);
+    const encodedQueue = this.#shouldEncode
+      ? encodeb64(stringifiedQueue)
+      : stringifiedQueue;
     return encodedQueue;
   }
 

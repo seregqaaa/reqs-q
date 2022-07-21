@@ -1,6 +1,6 @@
 {
   "name": "reqs-q",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "reqs-q is a simple and lightweight JavaScript library to help you control the order of requests",
   "keywords": [
     "requests queue",
@@ -8,7 +8,11 @@
     "queue",
     "order",
     "js",
-    "no dependencies"
+    "no dependencies",
+    "persist",
+    "localStorage",
+    "messages order",
+    "chat"
   ],
   "repository": {
     "type": "git",

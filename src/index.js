@@ -4,6 +4,8 @@ import { QueueStoreManager, stores } from './core/QueueStoreManager.js';
 
 import { RequestModel } from './models/Request.js';
 
+import { priorities } from './global/constants.js';
+
 export {
   RequestModel,
   RequestsQueue,
@@ -11,4 +13,5 @@ export {
   QueueLogger,
   QueueStoreManager,
   stores,
+  priorities,
 };

@@ -12,9 +12,9 @@
 - [x] Docs
   - [x] Code docs
   - [x] Core API
-  - [ ] Models API
-  - [ ] Store manager API
-  - [ ] Logger API
+  - [x] Models API
+  - [x] Store manager API
+  - [x] Logger API
 - [ ] Add test cases
 - [ ] Add typescript or d.ts
 - [ ] Examples
