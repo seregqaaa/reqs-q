@@ -329,7 +329,7 @@
             fetch(`${url}/${endpoint}${baseUrl === url ? query : ''}`),
           retryAfter: 1000,
           retriesCount: 2,
-          propsToStore: {
+          storeData: {
             actionPath: sendRequest.name,
             args: [...arguments],
           },
