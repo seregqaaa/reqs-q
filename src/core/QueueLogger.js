@@ -25,16 +25,16 @@ export class QueueLogger {
    * Creates new instance of `QueueLogger` class.
    *
    * @param {{
-   *  logLimit?: number
-   *  saveLogs?: boolean
-   *  showLogs?: boolean
-   * }} props
+   *    logLimit?: number
+   *    saveLogs?: boolean
+   *    showLogs?: boolean
+   * }} params `QueueLogger` parameters.
    */
-  constructor(props = {}) {
+  constructor(params = {}) {
     this.#logs = [];
-    this.#logLimit = props.logLimit ?? 50;
-    this.#saveLogs = props.saveLogs ?? false;
-    this.#showLogs = props.showLogs ?? false;
+    this.#logLimit = params.logLimit ?? 50;
+    this.#saveLogs = params.saveLogs ?? false;
+    this.#showLogs = params.showLogs ?? true;
   }
 
   /**
@@ -64,7 +64,7 @@ export class QueueLogger {
       {},
     );
     logObj.timestamp = timestamp;
-    if (this.#logs.length === logLimit) {
+    if (this.#logs.length === this.#logLimit) {
       this.#logs.pop();
     }
     this.#logs.unshift(logObj);

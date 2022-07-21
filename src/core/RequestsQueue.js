@@ -26,22 +26,37 @@ export class RequestsQueueCore {
   #isQueueBusy;
 
   /**
-   * Creates new instance of `RequestsQueueCore` class.
+   * @type {boolean}
    */
-  constructor() {
+  #showErrors;
+
+  /**
+   * Creates new instance of `RequestsQueueCore` class.
+   *
+   * @param {
+   *    showErrors?: boolean
+   * } params `RequestsQueueCore` parameters.
+   */
+  constructor(params) {
     this.#queue = [];
     this.#isQueueBusy = false;
+    this.#showErrors = params.showErrors ?? true;
   }
 
   /**
    * Adds provided request to the queue.
    *
-   * @param {RequestModel} request Request to be added to queue.
+   * @param {RequestModel | Promise<Function>} rawRequest Request to be added to queue.
    * @returns {Promise<RequestModel>}
    */
-  request(request) {
+  request(rawRequest) {
+    const request =
+      typeof rawRequest === 'function'
+        ? new RequestModel({ callback: rawRequest })
+        : rawRequest;
     const isRequest = request instanceof RequestModel;
     if (!isRequest) throw notRequestInstanceError;
+
     const promise = new Promise(r => {
       request.done = r;
     });
@@ -95,6 +110,7 @@ export class RequestsQueueCore {
    */
   async #handleRequest(request) {
     request.timestamps.startedAt = Date.now();
+    request.status = requestsStatuses.inProgress;
 
     this.log('New request starts executing', request);
 
@@ -103,6 +119,7 @@ export class RequestsQueueCore {
     request.status = requestsStatuses.done;
     request.response = response;
     request.done(request);
+    this.log('Request result:', request);
   }
 
   /**
@@ -172,7 +189,7 @@ export class RequestsQueueCore {
 
       return result;
     } catch (e) {
-      if (this.showErrors) {
+      if (this.#showErrors) {
         console.error(e);
       }
       const error = {
@@ -235,8 +252,7 @@ export class RequestsQueue extends RequestsQueueCore {
    * }} params `RequestsQueue` parameters.
    */
   constructor(params = {}) {
-    super();
-    this.showErrors = params.showErrors ?? true;
+    super({ showErrors: params.showErrors ?? true });
     this.#logger = params.logger ?? null;
     this.#storeManager = params.storeManager ?? null;
   }
@@ -292,7 +308,7 @@ export class RequestsQueue extends RequestsQueueCore {
   }
 
   /**
-   * Restarts queue.
+   * Restarts queue with `QueueStoreManager`.
    *
    * @returns {Promise<any[] | undefined>}
    */

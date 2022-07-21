@@ -10,44 +10,44 @@ export class RequestModel {
    *
    * @param {{
    *    callback: Promise<Function>
-   *    errors?: any[]
-   *    status?: string
    *    timeout?: number
    *    priority?: number
    *    id?: number|string
-   *    timestamps?: Timestamps
    *    retryAfter?: number | null
    *    retriesCount?: number | null
-   *    response?: Record<string, any> | null
-   *    propsToStore?: {
+   *    storeData?: {
    *      actionPath: string
    *      args: any[]
    *      storageDuration?: number
    *    }
-   * }} props Request parameters.
+   * }} params Request parameters.
    */
-  constructor(props = { callback: () => ({}) }) {
+  constructor(params = { callback: () => ({}) }) {
+    if (!params.callback) {
+      throw new Error('Required parameter "callback" was not provided');
+    }
+
     // self
     this.done = null;
-    this.timestamps = new Timestamps(props.timestamps);
+    this.timestamps = new Timestamps(params.timestamps);
     this.timestamps.createdAt = Date.now();
 
     // required
-    this.callback = props.callback;
+    this.callback = params.callback;
 
     // not-required
-    this.errors = props.errors ?? [];
-    this.timeout = props.timeout ?? 15_000;
-    this.response = props.response ?? null;
-    this.id = props.id ?? getRandomString();
-    this.retryAfter = props.retryAfter ?? null;
-    this.retriesCount = props.retriesCount ?? null;
-    this.propsToStore = props.propsToStore ?? {};
-    this.priority = props.priority ?? priorities.low;
-    this.status = props.status ?? requestsStatuses.waiting;
+    this.errors = params.errors ?? [];
+    this.timeout = params.timeout ?? 15_000;
+    this.response = params.response ?? null;
+    this.id = params.id ?? getRandomString();
+    this.retryAfter = params.retryAfter ?? null;
+    this.retriesCount = params.retriesCount ?? null;
+    this.storeData = params.storeData ?? {};
+    this.priority = params.priority ?? priorities.low;
+    this.status = params.status ?? requestsStatuses.waiting;
 
-    this.propsToStore.storageDuration = this.propsToStore.storageDuration
-      ? this.propsToStore.storageDuration
+    this.storeData.storageDuration = this.storeData.storageDuration
+      ? this.storeData.storageDuration
       : 1000 * 60 * 60;
   }
 }
