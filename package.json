@@ -1,6 +1,6 @@
 {
   "name": "reqs-q",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "reqs-q is a simple and lightweight JavaScript library to help you control the order of requests",
   "keywords": [
     "requests queue",
@@ -16,9 +16,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/siga44/reqs-q"
+    "url": "git+https://github.com/seregqaaa/reqs-q"
   },
-  "homepage": "https://siga44.github.io/reqs-q/",
+  "homepage": "https://seregqaaa.github.io/reqs-q/",
   "main": "src/index.js",
   "author": "Sergey Kvashnin <seregqaaa@gmail.com>",
   "license": "MIT"

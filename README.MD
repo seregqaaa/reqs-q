@@ -140,7 +140,7 @@ yarn add reqs-q
     - Creates new request that can be submitted to the `RequestsQueue`.
     - `RequestModel` Constructor parameters.
       ```ts
-      callback: Promise<Function>
+      callback: () => Promise<any>
       timeout?: number // default is 15000 (ms)
       priority?: number // default is 1
       id?: number|string // default is random string
