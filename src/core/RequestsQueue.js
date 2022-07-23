@@ -7,6 +7,7 @@ import {
 
 // Utils
 import { unlink } from '../utils/helpers.js';
+import { protectObject } from '../utils/object.js';
 
 // Models
 import { notRequestInstanceError, RequestModel } from '../models/Request.js';
@@ -44,6 +45,20 @@ export class RequestsQueueCore {
   }
 
   /**
+   * @returns {RequestModel[]} Read-only requests queue.
+   */
+  get _queue() {
+    return unlink(this.#queue);
+  }
+
+  /**
+   * @returns {RequestModel[]} Read-only requests queue.
+   */
+  get queue() {
+    return protectObject(this.#queue);
+  }
+
+  /**
    * Adds provided request to the queue.
    *
    * @param {RequestModel | Promise<Function>} rawRequest Request to be added to queue.
@@ -61,6 +76,7 @@ export class RequestsQueueCore {
       request.done = r;
     });
     this.#queue.push(request);
+    this.onRequestAdd();
     this.log('Request has been added to the queue', request);
     if (!this.#isQueueBusy) this.#handleQueue();
     return promise;
@@ -76,6 +92,7 @@ export class RequestsQueueCore {
     const queue = this.#queue;
     if (queue.length === 0) {
       this.#isQueueBusy = false;
+      this.onQueueEmpty();
       this.log('Queue is empty, waiting for new requests...');
       return;
     }
@@ -84,11 +101,12 @@ export class RequestsQueueCore {
     queue.sort((a, b) => b.priority - a.priority);
 
     this.log('Queue has been sorted by request priority', queue);
+    this.onQueueSorted();
 
-    this.save(queue);
+    this.beforeRequestHandle();
     await this.#handleRequest(queue[0]);
     queue.shift();
-    this.save(queue);
+    this.afterRequestHandle();
 
     if (queue.length > 0) {
       this.log(
@@ -113,6 +131,7 @@ export class RequestsQueueCore {
     request.status = requestsStatuses.inProgress;
 
     this.log('New request starts executing', request);
+    this.onRequestStartExecute(request);
 
     const response = await this.#getResponse(request);
     request.timestamps.doneAt = Date.now();
@@ -120,6 +139,7 @@ export class RequestsQueueCore {
     request.response = response;
     request.done(request);
     this.log('Request result:', request);
+    this.onRequestDone(request);
   }
 
   /**
@@ -148,11 +168,15 @@ export class RequestsQueueCore {
 
     if (shouldRetry) {
       this.log(`Retrying: attempt ${retriesDone}`, request);
+      this.onRetry(request);
     } else {
       this.log(
         `Request has been ${response.isError ? 'failed' : 'completed'}`,
         request,
       );
+      response.isError
+        ? this.onRequestFail(request)
+        : this.onRequestSuccess(request);
     }
 
     return shouldRetry
@@ -169,6 +193,7 @@ export class RequestsQueueCore {
    */
   async #makeRequest(request, retriesDone = 0) {
     this.log(`Request in progress: attempt ${retriesDone}`, request);
+    this.onRequestProgress(request);
 
     try {
       const result = await Promise.race([
@@ -213,26 +238,67 @@ export class RequestsQueueCore {
     return new Promise((_, r) => setTimeout(() => r(ERR_TIMEOUT), timeout));
   }
 
+  // Lifecycle hooks.
+
+  // 1
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestAdd(request) {}
+
+  // 2
+  onQueueSorted() {}
+
+  // 3
+  beforeRequestHandle() {}
+
+  // 4
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestStartExecute(request) {}
+
+  // 5
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestProgress(request) {}
+
+  // 6
+  /**
+   * @param {RequestModel} request
+   */
+  onRetry(request) {}
+
+  // 7
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestFail(request) {}
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestSuccess(request) {}
+
+  // 8
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestDone(request) {}
+
+  // 9
+  afterRequestHandle() {}
+
+  // 10
+  onQueueEmpty() {}
+
   log() {}
-  save() {}
 }
 
 /**
  * Requests queue class.
  */
 export class RequestsQueue extends RequestsQueueCore {
-  /**
-   * @type {Error}
-   */
-  #readOnlyError = new Error('This object is read-only');
-  /**
-   * @type {RequestModel[]}
-   */
-  #queue;
-  /**
-   * @type {string[]}
-   */
-  #allowedPropNames = ['length'];
   /**
    * @type {QueueLogger}
    */
@@ -258,20 +324,27 @@ export class RequestsQueue extends RequestsQueueCore {
   }
 
   /**
-   * @returns {RequestModel[]} Read-only requests queue.
-   */
-  get queue() {
-    return this.#protect(this.#queue);
-  }
-
-  /**
    * @returns {Record<string, any>[]} Read-only logs.
    */
   get logs() {
     if (!this.#logger) {
       throw new Error('Logger was not provided when the instance was created');
     }
-    return this.#protect(this.#logger.logs);
+    return protectObject(this.#logger.logs);
+  }
+
+  /**
+   * Saves queue when request added.
+   */
+  onRequestAdd() {
+    this.save(unlink(this._queue));
+  }
+
+  /**
+   * Saves queue after request handled.
+   */
+  afterRequestHandle() {
+    this.save(unlink(this._queue));
   }
 
   /**
@@ -315,24 +388,5 @@ export class RequestsQueue extends RequestsQueueCore {
   async restart() {
     if (!this.#storeManager) return;
     return await this.#storeManager.restart();
-  }
-
-  /**
-   * Protects provided object from changes.
-   *
-   * @param {any} object Object to be protected.
-   */
-  #protect(object) {
-    return new Proxy(object, {
-      get: (queue, propName) => {
-        if (this.#allowedPropNames.includes(propName)) {
-          return queue[propName];
-        }
-        throw this.#readOnlyError;
-      },
-      set: () => {
-        throw this.#readOnlyError;
-      },
-    });
   }
 }

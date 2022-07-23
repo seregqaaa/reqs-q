@@ -12,3 +12,29 @@ export function getDeepField(currentObj, rawPath) {
   path.shift();
   return getDeepField(currentObj[currentField], path);
 }
+
+/**
+ * Protects provided object from changes.
+ *
+ * @param {any} object Object to be protected.
+ * @param {string[]} allowedPropNames Prop names can be accessed.
+ * @param {Error} error Error to be throwed.
+ * @returns
+ */
+export function protectObject(
+  object,
+  allowedPropNames = ['length'],
+  error = new Error('This object is read-only'),
+) {
+  return new Proxy(object, {
+    get: (queue, propName) => {
+      if (allowedPropNames.includes(propName)) {
+        return queue[propName];
+      }
+      throw error;
+    },
+    set: () => {
+      throw error;
+    },
+  });
+}
