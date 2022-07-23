@@ -132,8 +132,6 @@ yarn add reqs-q
 
     - Restarts queue with `QueueStoreManager`.
 
-  - ##### ``
-
 - #### `RequestModel`
 
   - ##### `RequestModel.constructor`
