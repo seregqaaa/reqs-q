@@ -9,7 +9,7 @@ export class RequestModel {
    * Creates new instance of `RequestModel` class.
    *
    * @param {{
-   *    callback: Promise<Function>
+   *    callback: () => Promise<any>
    *    timeout?: number
    *    priority?: number
    *    id?: number|string

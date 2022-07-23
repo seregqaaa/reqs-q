@@ -7,6 +7,7 @@ import {
 
 // Utils
 import { unlink } from '../utils/helpers.js';
+import { protectObject } from '../utils/object.js';
 
 // Models
 import { notRequestInstanceError, RequestModel } from '../models/Request.js';
@@ -44,6 +45,20 @@ export class RequestsQueueCore {
   }
 
   /**
+   * @returns {RequestModel[]} Read-only requests queue.
+   */
+  get _queue() {
+    return this.#queue;
+  }
+
+  /**
+   * @returns {RequestModel[]} Read-only requests queue.
+   */
+  get queue() {
+    return protectObject(this.#queue);
+  }
+
+  /**
    * Adds provided request to the queue.
    *
    * @param {RequestModel | Promise<Function>} rawRequest Request to be added to queue.
@@ -61,7 +76,7 @@ export class RequestsQueueCore {
       request.done = r;
     });
     this.#queue.push(request);
-    this.log('Request has been added to the queue', request);
+    this.onRequestAdd(request);
     if (!this.#isQueueBusy) this.#handleQueue();
     return promise;
   }
@@ -76,28 +91,17 @@ export class RequestsQueueCore {
     const queue = this.#queue;
     if (queue.length === 0) {
       this.#isQueueBusy = false;
-      this.log('Queue is empty, waiting for new requests...');
+      this.onQueueEmpty();
       return;
     }
 
     this.#isQueueBusy = true;
     queue.sort((a, b) => b.priority - a.priority);
 
-    this.log('Queue has been sorted by request priority', queue);
-
-    this.save(queue);
+    this.beforeRequestHandle();
     await this.#handleRequest(queue[0]);
     queue.shift();
-    this.save(queue);
-
-    if (queue.length > 0) {
-      this.log(
-        `${queue.length} request${
-          queue.length === 1 ? '' : 's'
-        } left in the queue`,
-        queue,
-      );
-    }
+    this.afterRequestHandle();
 
     return this.#handleQueue();
   }
@@ -112,14 +116,15 @@ export class RequestsQueueCore {
     request.timestamps.startedAt = Date.now();
     request.status = requestsStatuses.inProgress;
 
-    this.log('New request starts executing', request);
+    this.onRequestStartExecute(request);
 
     const response = await this.#getResponse(request);
     request.timestamps.doneAt = Date.now();
     request.status = requestsStatuses.done;
     request.response = response;
     request.done(request);
-    this.log('Request result:', request);
+
+    this.onRequestDone(request);
   }
 
   /**
@@ -147,12 +152,11 @@ export class RequestsQueueCore {
       retriesDone < request.retriesCount;
 
     if (shouldRetry) {
-      this.log(`Retrying: attempt ${retriesDone}`, request);
+      this.onRetry(request, retriesDone);
     } else {
-      this.log(
-        `Request has been ${response.isError ? 'failed' : 'completed'}`,
-        request,
-      );
+      response.isError
+        ? this.onRequestFail(request)
+        : this.onRequestSuccess(request);
     }
 
     return shouldRetry
@@ -168,7 +172,7 @@ export class RequestsQueueCore {
    * @returns {Promise<Record<string, any>>} Request result.
    */
   async #makeRequest(request, retriesDone = 0) {
-    this.log(`Request in progress: attempt ${retriesDone}`, request);
+    this.onRequestProgress(request, retriesDone);
 
     try {
       const result = await Promise.race([
@@ -213,26 +217,64 @@ export class RequestsQueueCore {
     return new Promise((_, r) => setTimeout(() => r(ERR_TIMEOUT), timeout));
   }
 
-  log() {}
-  save() {}
+  // Lifecycle hooks.
+
+  // 1
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestAdd(request) {}
+
+  // 2
+  beforeRequestHandle() {}
+
+  // 3
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestStartExecute(request) {}
+
+  // 4
+  /**
+   * @param {RequestModel} request
+   * @param {number} retriesDone
+   */
+  onRequestProgress(request, retriesDone) {}
+
+  // 5
+  /**
+   * @param {RequestModel} request
+   * @param {number} retriesDone
+   */
+  onRetry(request, retriesDone) {}
+
+  // 6
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestFail(request) {}
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestSuccess(request) {}
+
+  // 7
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestDone(request) {}
+
+  // 8
+  afterRequestHandle() {}
+
+  // 9
+  onQueueEmpty() {}
 }
 
 /**
  * Requests queue class.
  */
 export class RequestsQueue extends RequestsQueueCore {
-  /**
-   * @type {Error}
-   */
-  #readOnlyError = new Error('This object is read-only');
-  /**
-   * @type {RequestModel[]}
-   */
-  #queue;
-  /**
-   * @type {string[]}
-   */
-  #allowedPropNames = ['length'];
   /**
    * @type {QueueLogger}
    */
@@ -258,20 +300,91 @@ export class RequestsQueue extends RequestsQueueCore {
   }
 
   /**
-   * @returns {RequestModel[]} Read-only requests queue.
-   */
-  get queue() {
-    return this.#protect(this.#queue);
-  }
-
-  /**
    * @returns {Record<string, any>[]} Read-only logs.
    */
   get logs() {
     if (!this.#logger) {
       throw new Error('Logger was not provided when the instance was created');
     }
-    return this.#protect(this.#logger.logs);
+    return protectObject(this.#logger.logs);
+  }
+
+  /**
+   * Saves queue when request added.
+   *
+   * @param {RequestModel} request
+   */
+  onRequestAdd(request) {
+    this.save(unlink(this._queue));
+    this.log('Request has been added to the queue', request);
+  }
+
+  /**
+   * Saves queue after request handled.
+   */
+  afterRequestHandle() {
+    const queue = this._queue;
+    if (queue.length > 0) {
+      this.log(
+        `${queue.length} request${
+          queue.length === 1 ? '' : 's'
+        } left in the queue`,
+        queue,
+      );
+    }
+    this.save(unlink(queue));
+  }
+
+  onQueueEmpty() {
+    this.log('Queue is empty, waiting for new requests...');
+  }
+
+  beforeRequestHandle() {
+    this.log('Queue has been sorted by request priority', this._queue);
+  }
+
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestStartExecute(request) {
+    this.log('New request starts executing', request);
+  }
+
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestDone(request) {
+    this.log('Request result:', request);
+  }
+
+  /**
+   * @param {RequestModel} request
+   * @param {number} retriesDone
+   */
+  onRetry(request, retriesDone) {
+    this.log(`Retrying: attempt ${retriesDone}`, request);
+  }
+
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestFail(request) {
+    this.log('Request has been failed', request);
+  }
+
+  /**
+   * @param {RequestModel} request
+   */
+  onRequestSuccess(request) {
+    this.log('Request has been completed', request);
+  }
+
+  /**
+   * @param {RequestModel} request
+   * @param {number} retriesDone
+   */
+  onRequestProgress(request, retriesDone) {
+    this.log(`Request in progress: attempt ${retriesDone}`, request);
   }
 
   /**
@@ -315,24 +428,5 @@ export class RequestsQueue extends RequestsQueueCore {
   async restart() {
     if (!this.#storeManager) return;
     return await this.#storeManager.restart();
-  }
-
-  /**
-   * Protects provided object from changes.
-   *
-   * @param {any} object Object to be protected.
-   */
-  #protect(object) {
-    return new Proxy(object, {
-      get: (queue, propName) => {
-        if (this.#allowedPropNames.includes(propName)) {
-          return queue[propName];
-        }
-        throw this.#readOnlyError;
-      },
-      set: () => {
-        throw this.#readOnlyError;
-      },
-    });
   }
 }
