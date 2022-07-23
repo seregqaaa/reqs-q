@@ -9,7 +9,7 @@ export const stores = {
  * Queue Store Manager class.
  */
 export class QueueStoreManager {
-  static LOCAL_STORAGE_KEY = '__reqs-q-v1.0.0__';
+  static LOCAL_STORAGE_KEY = '__reqs-q-v1.1.0__';
 
   /**
    * @type {keyof stores}
