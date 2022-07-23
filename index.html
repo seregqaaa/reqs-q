@@ -188,7 +188,7 @@
     </style>
   </head>
   <body>
-    <h3 id="version-title">v0.1.5</h3>
+    <h3 id="version-title">v1.1.0</h3>
 
     <header class="header">
       <ul class="link-items">
@@ -275,19 +275,25 @@
 
       let isUrlInvalid = false;
       let isEndpointsInvalid = false;
-      let isActiveRequest = false;
 
-      setInterval(() => {
+      function handleRestartButtonState() {
         const text = 'Restart queue';
-        localStorage.getItem(QueueStoreManager.LOCAL_STORAGE_KEY)?.length > 4 &&
-        !isActiveRequest
+        localStorage.getItem(QueueStoreManager.LOCAL_STORAGE_KEY)?.length > 4
           ? enableButton(restart, text)
-          : disableButton(restart, text);
-      }, 128);
+          : disableButton(
+              restart,
+              text,
+              'click "Make requests" button and quickly reload page',
+            );
+      }
+
+      handleRestartButtonState();
 
       restart.addEventListener('click', e => {
-        if (e.target.disabled || isActiveRequest) return;
-        requestsQueue.restart();
+        if (e.target.disabled) return;
+        requestsQueue.restart().finally(() => {
+          handleRestartButtonState();
+        });
       });
 
       button.addEventListener('click', e => {
@@ -371,9 +377,9 @@
         console.log(endpoint, json);
       }
 
-      function disableButton(button, text) {
+      function disableButton(button, text, title) {
         button.setAttribute('disabled', true);
-        button.setAttribute('title', text);
+        button.setAttribute('title', title ?? text);
         button.textContent = text;
       }
 
