@@ -9,7 +9,7 @@ export const stores = {
  * Queue Store Manager class.
  */
 export class QueueStoreManager {
-  static LOCAL_STORAGE_KEY = '__reqs-q-v1.0.0__';
+  static LOCAL_STORAGE_KEY = '__reqs-q-v1.1.0__';
 
   /**
    * @type {keyof stores}
@@ -130,9 +130,7 @@ export class QueueStoreManager {
       args: this.#checkArgsSafety(r.storeData.args ?? []),
       timestamp: Date.now(),
     }));
-    const filteredQueue = mappedQueue.filter(
-      item => Object.keys(item).length > 2,
-    );
+    const filteredQueue = mappedQueue.filter(item => Boolean(item.actionPath));
     const stringifiedQueue = JSON.stringify(filteredQueue);
     const encodedQueue = this.#shouldEncode
       ? encodeb64(stringifiedQueue)

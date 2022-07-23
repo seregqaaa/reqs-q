@@ -98,7 +98,31 @@ yarn add reqs-q
       ```
 
   - ##### `RequestsQueueCore.prototype.request(request: RequestModel | Promise<Function>): Promise<RequestModel>`
+
     - Adds provided request to the queue.
+
+  - ##### Lifecycle hooks.
+    - ```ts
+      // 1
+      onRequestAdd(request: RequestModel) {}
+      // 2
+      beforeRequestHandle() {}
+      // 3
+      onRequestStartExecute(request: RequestModel) {}
+      // 4
+      onRequestProgress(request: RequestModel, retriesDone: number) {}
+      // 5
+      onRetry(request: RequestModel, retriesDone: number) {}
+      // 6
+      onRequestFail(request: RequestModel) {}
+      onRequestSuccess(request: RequestModel) {}
+      // 7
+      onRequestDone(request: RequestModel) {}
+      // 8
+      afterRequestHandle() {}
+      // 9
+      onQueueEmpty() {}
+      ```
 
 - #### `RequestsQueue` (extends `RequestsQueueCore`)
 
@@ -131,8 +155,6 @@ yarn add reqs-q
   - ##### `RequestsQueue.prototype.restart(): Promise<any[]>`
 
     - Restarts queue with `QueueStoreManager`.
-
-  - ##### ``
 
 - #### `RequestModel`
 
