@@ -3,6 +3,8 @@
 reqs-q is a simple and lightweight JavaScript library to help you control the
 order of requests.
 
+[Live example](https://seregqaaa.github.io/reqs-q/)
+
 ## Installation
 
 ```
