@@ -1,4 +1,4 @@
-import { getRandomInt } from './number.js';
+import { getRandomInt } from './number';
 
 export function getRandomString(length = 16, prevString = '') {
   const string = getRandomInt().toString(16) + prevString;

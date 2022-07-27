@@ -1,4 +1,4 @@
-import { unlink } from '../utils/helpers.js';
+import { unlink } from '../utils/helpers';
 
 /**
  * Queue Logger class.

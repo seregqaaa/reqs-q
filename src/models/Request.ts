@@ -1,5 +1,5 @@
-import { priorities, requestsStatuses } from '../global/constants.js';
-import { getRandomString } from '../utils/string.js';
+import { priorities, requestsStatuses } from '../global/constants';
+import { getRandomString } from '../utils/string';
 
 /**
  *  Request model.

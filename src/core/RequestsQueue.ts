@@ -3,11 +3,11 @@ import {
   ERR_TIMEOUT,
   ERR_UNKNOWN_NETWORK_ERROR,
   requestsStatuses,
-} from '../global/constants.js';
+} from '../global/constants';
 
 // Utils
-import { unlink } from '../utils/helpers.js';
-import { protectObject } from '../utils/object.js';
+import { unlink } from '../utils/helpers';
+import { protectObject } from '../utils/object';
 
 // Models
 import { notRequestInstanceError, RequestModel } from '../models/Request.js';

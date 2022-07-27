@@ -1,5 +1,5 @@
-import { decodeb64, encodeb64 } from '../utils/b64.js';
-import { getDeepField } from '../utils/object.js';
+import { decodeb64, encodeb64 } from '../utils/b64';
+import { getDeepField } from '../utils/object';
 
 export const stores = {
   localStorage: 'localStorage',
@@ -9,7 +9,7 @@ export const stores = {
  * Queue Store Manager class.
  */
 export class QueueStoreManager {
-  static LOCAL_STORAGE_KEY = '__reqs-q-v1.1.0__';
+  static LOCAL_STORAGE_KEY = `__reqs-q-v1.1.0__`;
 
   /**
    * @type {keyof stores}
