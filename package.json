@@ -20,7 +20,6 @@
     "url": "git+https://github.com/seregqaaa/reqs-q"
   },
   "homepage": "https://seregqaaa.github.io/reqs-q/",
-  "main": "src/index.ts",
   "author": "Sergey Kvashnin <seregqaaa@gmail.com>",
   "license": "MIT",
   "typings": "types/index.d.ts",
