@@ -128,9 +128,7 @@ export class QueueStoreManager {
   #loadFromLocalStorage(): BaseStoreData[] {
     const localStorageQueue =
       localStorage.getItem(QueueStoreManager.LOCAL_STORAGE_KEY) ??
-      this.#shouldEncode
-        ? encodeb64('[]')
-        : '[]';
+      (this.#shouldEncode ? encodeb64('[]') : '[]');
     const decodedQueue = this.#shouldEncode
       ? decodeb64(localStorageQueue)
       : localStorageQueue;

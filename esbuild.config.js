@@ -1,4 +1,4 @@
-const watch = process.argv.includes('--watch');
+const isDev = process.argv.includes('--watch');
 
 require('esbuild')
   .build({
@@ -7,12 +7,13 @@ require('esbuild')
     outdir: '.',
     treeShaking: true,
     minifyIdentifiers: false,
-    minifySyntax: true,
-    minifyWhitespace: true,
+    minifySyntax: !isDev,
+    minifyWhitespace: !isDev,
     keepNames: true,
     splitting: true,
     format: 'esm',
-    watch,
+    watch: isDev,
+    target: isDev ? 'es2022' : 'es2015',
   })
   .catch(e => {
     console.error(e);
