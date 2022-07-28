@@ -1,6 +1,6 @@
 import { unlink } from '../utils/helpers';
 
-type Log = {
+export type Log = {
   [x: string]: any;
   timestamp: number;
 };

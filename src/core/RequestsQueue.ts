@@ -15,7 +15,7 @@ import {
   RequestModel,
   RequestModelError,
 } from '../models/Request.js';
-import { QueueLogger } from './QueueLogger';
+import { Log, QueueLogger } from './QueueLogger';
 import { QueueStoreManager, BaseStoreData } from './QueueStoreManager';
 
 type RequestsQueueCoreParams = {
@@ -57,14 +57,14 @@ export class RequestsQueueCore {
   /**
    * @returns {RequestModel[]} Read-only requests queue.
    */
-  get _queue(): RequestModel[] {
+  protected get _queue(): RequestModel[] {
     return this.#queue;
   }
 
   /**
    * @returns {RequestModel[]} Read-only requests queue.
    */
-  get queue(): RequestModel[] {
+  public get queue(): RequestModel[] {
     return protectObject(this.#queue);
   }
 
@@ -243,52 +243,55 @@ export class RequestsQueueCore {
   /**
    * @param {RequestModel} request
    */
-  public onRequestAdd(request: RequestModel): void {}
+  protected onRequestAdd(request: RequestModel): void {}
 
   // 2
-  public beforeRequestHandle(): void {}
+  protected beforeRequestHandle(): void {}
 
   // 3
   /**
    * @param {RequestModel} request
    */
-  public onRequestStartExecute(request: RequestModel): void {}
+  protected onRequestStartExecute(request: RequestModel): void {}
 
   // 4
   /**
    * @param {RequestModel} request
    * @param {number} retriesDone
    */
-  public onRequestProgress(request: RequestModel, retriesDone: number): void {}
+  protected onRequestProgress(
+    request: RequestModel,
+    retriesDone: number,
+  ): void {}
 
   // 5
   /**
    * @param {RequestModel} request
    * @param {number} retriesDone
    */
-  public onRetry(request: RequestModel, retriesDone: number): void {}
+  protected onRetry(request: RequestModel, retriesDone: number): void {}
 
   // 6
   /**
    * @param {RequestModel} request
    */
-  public onRequestFail(request: RequestModel): void {}
+  protected onRequestFail(request: RequestModel): void {}
   /**
    * @param {RequestModel} request
    */
-  public onRequestSuccess(request: RequestModel): void {}
+  protected onRequestSuccess(request: RequestModel): void {}
 
   // 7
   /**
    * @param {RequestModel} request
    */
-  public onRequestDone(request: RequestModel): void {}
+  protected onRequestDone(request: RequestModel): void {}
 
   // 8
-  public afterRequestHandle(): void {}
+  protected afterRequestHandle(): void {}
 
   // 9
-  public onQueueEmpty(): void {}
+  protected onQueueEmpty(): void {}
 }
 
 type RequestsQueueParams = {
@@ -328,7 +331,7 @@ export class RequestsQueue extends RequestsQueueCore {
   /**
    * @returns {Record<string, any>[]} Read-only logs.
    */
-  get logs() {
+  public get logs(): Log[] {
     if (!this.#logger) {
       throw new Error('Logger was not provided when the instance was created');
     }
@@ -340,15 +343,15 @@ export class RequestsQueue extends RequestsQueueCore {
    *
    * @param {RequestModel} request
    */
-  onRequestAdd(request: RequestModel): void {
-    this.save(unlink(this._queue));
+  protected onRequestAdd(request: RequestModel): void {
+    this.save(this._queue);
     this.log('Request has been added to the queue', request);
   }
 
   /**
    * Saves queue after request handled.
    */
-  afterRequestHandle() {
+  protected afterRequestHandle(): void {
     const queue = this._queue;
     if (queue.length > 0) {
       this.log(
@@ -358,28 +361,28 @@ export class RequestsQueue extends RequestsQueueCore {
         queue,
       );
     }
-    this.save(unlink(queue));
+    this.save(queue);
   }
 
-  onQueueEmpty() {
+  protected onQueueEmpty(): void {
     this.log('Queue is empty, waiting for new requests...');
   }
 
-  beforeRequestHandle() {
+  protected beforeRequestHandle(): void {
     this.log('Queue has been sorted by request priority', this._queue);
   }
 
   /**
    * @param {RequestModel} request
    */
-  onRequestStartExecute(request: RequestModel) {
+  protected onRequestStartExecute(request: RequestModel): void {
     this.log('New request starts executing', request);
   }
 
   /**
    * @param {RequestModel} request
    */
-  onRequestDone(request: RequestModel) {
+  protected onRequestDone(request: RequestModel): void {
     this.log('Request result:', request);
   }
 
@@ -387,21 +390,21 @@ export class RequestsQueue extends RequestsQueueCore {
    * @param {RequestModel} request
    * @param {number} retriesDone
    */
-  onRetry(request: RequestModel, retriesDone: number) {
+  protected onRetry(request: RequestModel, retriesDone: number): void {
     this.log(`Retrying: attempt ${retriesDone}`, request);
   }
 
   /**
    * @param {RequestModel} request
    */
-  onRequestFail(request: RequestModel) {
+  protected onRequestFail(request: RequestModel): void {
     this.log('Request has been failed', request);
   }
 
   /**
    * @param {RequestModel} request
    */
-  onRequestSuccess(request: RequestModel) {
+  protected onRequestSuccess(request: RequestModel): void {
     this.log('Request has been completed', request);
   }
 
@@ -409,7 +412,10 @@ export class RequestsQueue extends RequestsQueueCore {
    * @param {RequestModel} request
    * @param {number} retriesDone
    */
-  onRequestProgress(request: RequestModel, retriesDone: number) {
+  protected onRequestProgress(
+    request: RequestModel,
+    retriesDone: number,
+  ): void {
     this.log(`Request in progress: attempt ${retriesDone}`, request);
   }
 
@@ -420,7 +426,7 @@ export class RequestsQueue extends RequestsQueueCore {
    * @param  {...any} data Data to be logged.
    * @returns {void}
    */
-  log(...data: any[]): void {
+  protected log(...data: any[]): void {
     if (!this.#logger) return;
     this.#logger.log(...data);
   }
@@ -431,7 +437,7 @@ export class RequestsQueue extends RequestsQueueCore {
    * @param {RequestModel[]} queue Queue to be stored.
    * @returns {void}
    */
-  save(queue: RequestModel[]): void {
+  protected save(queue: RequestModel[]): void {
     if (!this.#storeManager) return;
     this.#storeManager.save(unlink(queue));
   }
@@ -441,7 +447,7 @@ export class RequestsQueue extends RequestsQueueCore {
    *
    * @returns {BaseStoreData[]}
    */
-  load(): BaseStoreData[] | void | null {
+  public load(): BaseStoreData[] | void | null {
     if (!this.#storeManager) return;
     return this.#storeManager.load();
   }
@@ -451,7 +457,7 @@ export class RequestsQueue extends RequestsQueueCore {
    *
    * @returns {Promise<any[] | void>}
    */
-  async restart(): Promise<any[] | void> {
+  public async restart(): Promise<any[] | void> {
     if (!this.#storeManager) return;
     return await this.#storeManager.restart();
   }
