@@ -1,42 +1,59 @@
-import { decodeb64, encodeb64 } from '../utils/b64.js';
-import { getDeepField } from '../utils/object.js';
+import { decodeb64, encodeb64 } from '../utils/b64';
+import { getDeepField } from '../utils/object';
 
-export const stores = {
-  localStorage: 'localStorage',
+import { RequestModel } from '../models/Request';
+
+export const enum Stores {
+  LocalStorage = 'localStorage',
+}
+export type BaseStoreData = {
+  actionPath: string;
+  args: any[];
+};
+
+export type StoreData = BaseStoreData & { storageDuration: number };
+
+type LoadedStoreData = StoreData & { timestamp: number };
+
+type QueueStoreManagerParams = {
+  restoreObject?: Record<string, any>;
+  store?: Stores;
+  showWarn?: boolean;
+  shouldEncode?: boolean;
 };
 
 /**
  * Queue Store Manager class.
  */
 export class QueueStoreManager {
-  static LOCAL_STORAGE_KEY = '__reqs-q-v1.1.0__';
+  static LOCAL_STORAGE_KEY = `__reqs-q-v1.2.0__`;
 
   /**
-   * @type {keyof stores}
+   * @type {Stores}
    */
-  #store;
-  #restoreObject;
+  #store: Stores;
+  #restoreObject: Record<string, any> | null;
   /**
    * @type {boolean}
    */
-  #showWarn;
+  #showWarn: boolean;
   /**
    * @type {boolean}
    */
-  #shouldEncode;
+  #shouldEncode: boolean;
 
   /**
    * Creates new instance of `QueueStoreManager` class.
    *
    * @param {{
-   *    restoreObject: any
+   *    restoreObject?: any
    *    store?: keyof stores
    *    showWarn?: boolean
    *    shouldEncode?: boolean
    * }} params `QueueStoreManager` parameters.
    */
-  constructor(params = {}) {
-    this.#store = params.store ?? stores.localStorage;
+  constructor(params: QueueStoreManagerParams = {}) {
+    this.#store = params.store ?? Stores.LocalStorage;
     this.#restoreObject = params.restoreObject ?? null;
     this.#showWarn = params.showWarn ?? true;
     this.#shouldEncode = params.shouldEncode ?? true;
@@ -47,9 +64,9 @@ export class QueueStoreManager {
    *
    * @param {RequestModel[]} queue
    */
-  save(queue) {
+  save(queue: RequestModel[]) {
     switch (this.#store) {
-      case stores.localStorage:
+      case Stores.LocalStorage:
         this.#saveToLocalStorage(queue);
         break;
       default:
@@ -60,11 +77,11 @@ export class QueueStoreManager {
   /**
    * Loads queue from chosen storage.
    *
-   * @returns {{ actionPath: string, args: any[] }[]}
+   * @returns {BaseStoreData[]}
    */
-  load() {
+  load(): BaseStoreData[] | null {
     switch (this.#store) {
-      case stores.localStorage:
+      case Stores.LocalStorage:
         return this.#loadFromLocalStorage();
       default:
         return null;
@@ -74,13 +91,19 @@ export class QueueStoreManager {
   /**
    * Loads queue from storage and restarts it.
    */
-  async restart() {
-    if (!this.#restoreObject) return;
+  async restart(): Promise<any[] | void> {
+    const restoreObject = this.#restoreObject;
+    if (!restoreObject) return;
     const actions = this.load();
-    const promises = actions.map(
-      async ({ actionPath, args }) =>
-        await getDeepField(this.#restoreObject, actionPath)(...args),
-    );
+    if (!actions) return;
+    const promises = actions.map(async ({ actionPath, args }) => {
+      const field = getDeepField(restoreObject, actionPath);
+      const isFn = typeof field === 'function';
+      if (!isFn) {
+        console.error('Incorrect field type', { actionPath, args, field });
+      }
+      return isFn ? await field(...args) : field;
+    });
     const results = await Promise.all(promises);
     this.save([]);
     return results;
@@ -91,7 +114,7 @@ export class QueueStoreManager {
    *
    * @param {RequestModel[]} rawQueue Queue to be stored.
    */
-  #saveToLocalStorage(rawQueue) {
+  #saveToLocalStorage(rawQueue: RequestModel[]) {
     const queue = this.#prepareForStore(rawQueue);
     localStorage.setItem(QueueStoreManager.LOCAL_STORAGE_KEY, queue);
   }
@@ -100,19 +123,22 @@ export class QueueStoreManager {
    * Gets queue from local storage and decodes queue string from base64.
    * Also deletes expired elements from array.
    *
-   * @returns {{ actionPath: string, args: any[] }[]}
+   * @returns {BaseStoreData[]}
    */
-  #loadFromLocalStorage() {
+  #loadFromLocalStorage(): BaseStoreData[] {
     const localStorageQueue =
-      localStorage.getItem(QueueStoreManager.LOCAL_STORAGE_KEY) ?? '[]';
+      localStorage.getItem(QueueStoreManager.LOCAL_STORAGE_KEY) ??
+      this.#shouldEncode
+        ? encodeb64('[]')
+        : '[]';
     const decodedQueue = this.#shouldEncode
       ? decodeb64(localStorageQueue)
       : localStorageQueue;
-    const parsedQueue = JSON.parse(decodedQueue);
+    const parsedQueue: LoadedStoreData[] = JSON.parse(decodedQueue);
     const filteredQueue = parsedQueue.filter(
       item => item.timestamp + item.storageDuration >= Date.now(),
     );
-    const mappedQueue = filteredQueue.map(item => ({
+    const mappedQueue: BaseStoreData[] = filteredQueue.map(item => ({
       actionPath: item.actionPath,
       args: this.#checkArgsSafety(item.args),
     }));
@@ -124,7 +150,7 @@ export class QueueStoreManager {
    *
    * @param {RequestModel[]} queue
    */
-  #prepareForStore(queue) {
+  #prepareForStore(queue: RequestModel[]): string {
     const mappedQueue = queue.map(r => ({
       ...r.storeData,
       args: this.#checkArgsSafety(r.storeData.args ?? []),
@@ -143,7 +169,7 @@ export class QueueStoreManager {
    *
    * @param {any[]} args Arguments to be checked.
    */
-  #checkArgsSafety(args) {
+  #checkArgsSafety(args: any[]) {
     return this.#showWarn
       ? args.map(arg => {
           try {
