@@ -16,7 +16,7 @@
   - [x] Store manager API
   - [x] Logger API
 - [ ] Add test cases
-- [ ] Add typescript or d.ts
+- [x] Add typescript or d.ts
 - [ ] Examples
   - [x] Create simple example
   - [ ] Create few working examples

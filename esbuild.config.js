@@ -1,3 +1,5 @@
+const watch = process.argv.includes('--watch');
+
 require('esbuild')
   .build({
     bundle: true,
@@ -10,6 +12,7 @@ require('esbuild')
     keepNames: true,
     splitting: true,
     format: 'esm',
+    watch,
   })
   .catch(e => {
     console.error(e);

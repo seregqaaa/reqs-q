@@ -1,25 +1,36 @@
 import { unlink } from '../utils/helpers';
 
+type Log = {
+  [x: string]: any;
+  timestamp: number;
+};
+
+type QueueLoggerParams = {
+  logLimit?: number;
+  saveLogs?: boolean;
+  showLogs?: boolean;
+};
+
 /**
  * Queue Logger class.
  */
 export class QueueLogger {
   /**
-   * @type {Record<string, any>[]}
+   * @type {Log[]}
    */
-  #logs;
+  #logs: Log[];
   /**
    * @type {number}
    */
-  #logLimit;
+  #logLimit: number;
   /**
    * @type {boolean}
    */
-  #saveLogs;
+  #saveLogs: boolean;
   /**
    * @type {boolean}
    */
-  #showLogs;
+  #showLogs: boolean;
 
   /**
    * Creates new instance of `QueueLogger` class.
@@ -30,7 +41,7 @@ export class QueueLogger {
    *    showLogs?: boolean
    * }} params `QueueLogger` parameters.
    */
-  constructor(params = {}) {
+  constructor(params: QueueLoggerParams = {}) {
     this.#logs = [];
     this.#logLimit = params.logLimit ?? 50;
     this.#saveLogs = params.saveLogs ?? false;
@@ -40,7 +51,7 @@ export class QueueLogger {
   /**
    * @returns {Record<string, any>[]}
    */
-  get logs() {
+  get logs(): Log[] {
     return this.#logs;
   }
 
@@ -51,19 +62,18 @@ export class QueueLogger {
    * @param  {...any} data Data to be logged.
    * @returns {void}
    */
-  log(...data) {
+  log(...data: any[]): void {
     const unlinkedData = unlink(data);
     const timestamp = Date.now();
     if (this.#showLogs) console.log(...unlinkedData, timestamp);
     if (!this.#saveLogs) return;
-    const logObj = Object.entries(unlinkedData).reduce(
+    const logObj: Log = Object.entries(unlinkedData).reduce(
       (logObj, [key, val]) => ({
         ...logObj,
         [key]: val,
       }),
-      {},
+      { timestamp },
     );
-    logObj.timestamp = timestamp;
     if (this.#logs.length === this.#logLimit) {
       this.#logs.pop();
     }

@@ -21,7 +21,7 @@ yarn add reqs-q
 
 - ### Base
 
-  ```js
+  ```ts
   import { RequestsQueueCore } from 'reqs-q';
 
   const requestsQueue = new RequestsQueueCore();
@@ -39,7 +39,7 @@ yarn add reqs-q
 
 - ### Advanced
 
-  ```js
+  ```ts
   import {
     RequestsQueue,
     RequestModel,
@@ -76,7 +76,7 @@ yarn add reqs-q
 
     // using this feature may be not safe.
     storeManager: new QueueStoreManager({
-      store: stores.localStorage,
+      store: Stores.LocalStorage,
       restoreObject: myApiManager,
       showWarn: true,
     }),
