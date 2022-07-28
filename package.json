@@ -27,7 +27,7 @@
   "scripts": {
     "build": "node esbuild.config.js",
     "dev": "node esbuild.config.js --watch",
-    "type": "tsc -d --declarationMap --emitDeclarationOnly"
+    "type": "tsc -d --declarationMap --declarationDir=types --emitDeclarationOnly"
   },
   "devDependencies": {
     "@types/node": "^18.6.1",
