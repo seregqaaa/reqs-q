@@ -99,7 +99,7 @@ yarn add reqs-q
       showErrors?: boolean // default is true
       ```
 
-  - ##### `RequestsQueueCore.prototype.request(request: RequestModel | Promise<Function>): Promise<RequestModel>`
+  - ##### `RequestsQueueCore.prototype.request(request: RequestModel | (...args: any[]) => Promise<any>): Promise<RequestModel>`
 
     - Adds provided request to the queue.
 
@@ -142,7 +142,7 @@ yarn add reqs-q
 
     - Returns read-only requests queue.
 
-  - ##### `RequestsQueue.prototype.logs: Record<string, any>[]`
+  - ##### `RequestsQueue.prototype.logs: Log[]`
 
     - Returns read-only logs.
 
@@ -150,7 +150,7 @@ yarn add reqs-q
 
     - Saves queue with `QueueStoreManager`.
 
-  - ##### `RequestsQueue.prototype.load(): { actionPath: string, args: any[] }[]`
+  - ##### `RequestsQueue.prototype.load(): BaseStoreData[]`
 
     - Loads queue with `QueueStoreManager`.
 
@@ -164,18 +164,14 @@ yarn add reqs-q
     - Creates new request that can be submitted to the `RequestsQueue`.
     - `RequestModel` Constructor parameters.
       ```ts
+      callback: () => Promise<any | void>
       callback: () => Promise<any>
       timeout?: number // default is 15000 (ms)
-      priority?: number // default is 1
-      id?: number|string // default is random string
+      priority?: Priorities | number // default is 1
+      id?: number | string // default is random string
       retryAfter?: number | null // default is null
       retriesCount?: number | null // default is null
-      // can be used only with `QueueStoreManager`
-      storeData?: {
-        actionPath: string
-        args: any[]
-        storageDuration?: number // default is 3_600_000 (1 hour)
-      }
+      storeData?: StoreData // can be used only with `QueueStoreManager`
       ```
 
 - #### `QueueLogger`
@@ -187,7 +183,7 @@ yarn add reqs-q
       saveLogs?: boolean // default is false
       showLogs?: boolean // default is true
       ```
-  - ##### `QueueLogger.prototype.logs`
+  - ##### `QueueLogger.prototype.logs: Log[]`
     - Returns saved logs.
 
 - #### `QueueStoreManager`
@@ -195,8 +191,9 @@ yarn add reqs-q
   - ##### `QueueStoreManager.contructor`
     - `QueueStoreManager` constructor parameters.
       ```ts
-      restoreObject: any // Object whose methods should be called after the queue is restored.
-      store?: keyof stores // default is 'localStorage'
+      // Object whose methods should be called after the queue is restored.
+      restoreObject?: Record<string, any>
+      store?: Stores // default is 'localStorage'
       showWarn?: boolean // default is true
       shouldEncode?: boolean // default is true
       ```
