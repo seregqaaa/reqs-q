@@ -264,8 +264,8 @@
         RequestsQueue,
         QueueLogger,
         QueueStoreManager,
-        stores,
-      } from './src/index.js';
+        Stores,
+      } from './index.js';
 
       const apiManager = {
         sendRequest,
@@ -274,7 +274,7 @@
       const requestsQueue = new RequestsQueue({
         logger: new QueueLogger({ saveLogs: false, showLogs: true }),
         storeManager: new QueueStoreManager({
-          store: stores.localStorage,
+          store: Stores.LocalStorage,
           restoreObject: apiManager,
         }),
       });
