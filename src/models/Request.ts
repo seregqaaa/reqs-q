@@ -11,11 +11,11 @@ export type RequestModelError = {
   timestamp: Date | number;
 };
 
-type RequestModelParams = {
+interface RequestModelParams {
   callback: () => Promise<any | void>;
-  retriesCount?: number;
+  retriesCount?: number | null;
+  retryAfter?: number | null;
   id?: string | number;
-  retryAfter?: number;
   timeout?: number;
   done?: null | ((request: RequestModel) => Promise<any | void>);
   response?: Record<string, any> | null;
@@ -24,12 +24,12 @@ type RequestModelParams = {
   storeData?: StoreData;
   priority?: Priorities;
   errors?: RequestModelError[];
-};
+}
 
 /**
  *  Request model.
  */
-export class RequestModel {
+export class RequestModel implements RequestModelParams {
   public done: null | ((request: RequestModel) => Promise<any | void>);
   public timestamps: Timestamps;
   public callback: () => Promise<any | void>;
@@ -88,15 +88,15 @@ export class RequestModel {
   }
 }
 
-type TimestampsParams =
-  | {
-      createdAt: null | number | Date;
-      startedAt: null | number | Date;
-      doneAt: null | number | Date;
-    }
-  | undefined;
+interface ITimestamps {
+  createdAt: null | number | Date;
+  startedAt: null | number | Date;
+  doneAt: null | number | Date;
+}
 
-class Timestamps {
+type TimestampsParams = ITimestamps | undefined;
+
+class Timestamps implements ITimestamps {
   createdAt: number | null | Date;
   startedAt: number | null | Date;
   doneAt: number | null | Date;
