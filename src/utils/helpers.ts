@@ -1,3 +1,3 @@
-export function unlink(data) {
+export function unlink(data: any) {
   return JSON.parse(JSON.stringify(data));
 }

@@ -1,11 +1,14 @@
 /**
  * Returns value of provided field.
  *
- * @param {Record<string, any> | any[]} currentObj Source object.
+ * @param {Record<string, any>} currentObj Source object.
  * @param {string[] | string} rawPath Field path.
  */
-export function getDeepField(currentObj, rawPath) {
-  const path = [];
+export function getDeepField(
+  currentObj: Record<string, any>,
+  rawPath: string | string[],
+): any {
+  const path: string[] = [];
   path.push(...(typeof rawPath === 'string' ? rawPath.split('.') : rawPath));
   if (path.length === 0 || typeof currentObj !== 'object') return currentObj;
   const currentField = path[0];
@@ -22,14 +25,14 @@ export function getDeepField(currentObj, rawPath) {
  * @returns
  */
 export function protectObject(
-  object,
-  allowedPropNames = ['length'],
-  error = new Error('This object is read-only'),
+  object: any,
+  allowedPropNames: string[] = ['length'],
+  error: Error = new Error('This object is read-only'),
 ) {
   return new Proxy(object, {
-    get: (queue, propName) => {
+    get: (target: any, propName: string) => {
       if (allowedPropNames.includes(propName)) {
-        return queue[propName];
+        return target[propName];
       }
       throw error;
     },

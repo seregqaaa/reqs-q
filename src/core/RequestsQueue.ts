@@ -2,15 +2,25 @@
 import {
   ERR_TIMEOUT,
   ERR_UNKNOWN_NETWORK_ERROR,
-  requestsStatuses,
-} from '../global/constants.js';
+  RequestsStatuses,
+} from '../global/constants';
 
 // Utils
-import { unlink } from '../utils/helpers.js';
-import { protectObject } from '../utils/object.js';
+import { unlink } from '../utils/helpers';
+import { protectObject } from '../utils/object';
 
 // Models
-import { notRequestInstanceError, RequestModel } from '../models/Request.js';
+import {
+  notRequestInstanceError,
+  RequestModel,
+  RequestModelError,
+} from '../models/Request.js';
+import { QueueLogger } from './QueueLogger';
+import { QueueStoreManager, BaseStoreData } from './QueueStoreManager';
+
+type RequestsQueueCoreParams = {
+  showErrors?: boolean;
+};
 
 /**
  * Core class of Requests Queue.
@@ -19,17 +29,17 @@ export class RequestsQueueCore {
   /**
    * @type {RequestModel[]}
    */
-  #queue;
+  #queue: RequestModel[];
 
   /**
    * @type {boolean}
    */
-  #isQueueBusy;
+  #isQueueBusy: boolean;
 
   /**
    * @type {boolean}
    */
-  #showErrors;
+  #showErrors: boolean;
 
   /**
    * Creates new instance of `RequestsQueueCore` class.
@@ -38,7 +48,7 @@ export class RequestsQueueCore {
    *    showErrors?: boolean
    * } params `RequestsQueueCore` parameters.
    */
-  constructor(params) {
+  constructor(params: RequestsQueueCoreParams) {
     this.#queue = [];
     this.#isQueueBusy = false;
     this.#showErrors = params.showErrors ?? true;
@@ -47,24 +57,26 @@ export class RequestsQueueCore {
   /**
    * @returns {RequestModel[]} Read-only requests queue.
    */
-  get _queue() {
+  get _queue(): RequestModel[] {
     return this.#queue;
   }
 
   /**
    * @returns {RequestModel[]} Read-only requests queue.
    */
-  get queue() {
+  get queue(): RequestModel[] {
     return protectObject(this.#queue);
   }
 
   /**
    * Adds provided request to the queue.
    *
-   * @param {RequestModel | Promise<Function>} rawRequest Request to be added to queue.
+   * @param {RequestModel | ((...args: any[]) => Promise<any | void>)} rawRequest Request to be added to queue.
    * @returns {Promise<RequestModel>}
    */
-  request(rawRequest) {
+  public request(
+    rawRequest: RequestModel | ((...args: any[]) => Promise<any | void>),
+  ): Promise<RequestModel> {
     const request =
       typeof rawRequest === 'function'
         ? new RequestModel({ callback: rawRequest })
@@ -72,8 +84,8 @@ export class RequestsQueueCore {
     const isRequest = request instanceof RequestModel;
     if (!isRequest) throw notRequestInstanceError;
 
-    const promise = new Promise(r => {
-      request.done = r;
+    const promise: Promise<RequestModel> = new Promise(r => {
+      request.done = <(request: RequestModel) => Promise<any>>r;
     });
     this.#queue.push(request);
     this.onRequestAdd(request);
@@ -87,7 +99,7 @@ export class RequestsQueueCore {
    *
    * @returns {Promise<void>}
    */
-  async #handleQueue() {
+  async #handleQueue(): Promise<void> {
     const queue = this.#queue;
     if (queue.length === 0) {
       this.#isQueueBusy = false;
@@ -112,17 +124,20 @@ export class RequestsQueueCore {
    * @param {RequestModel} request Request to be sent.
    * @returns {Promise<void>}
    */
-  async #handleRequest(request) {
+  async #handleRequest(request: RequestModel): Promise<void> {
     request.timestamps.startedAt = Date.now();
-    request.status = requestsStatuses.inProgress;
+    request.status = RequestsStatuses.InProgress;
 
     this.onRequestStartExecute(request);
 
     const response = await this.#getResponse(request);
     request.timestamps.doneAt = Date.now();
-    request.status = requestsStatuses.done;
+    request.status = RequestsStatuses.Done;
     request.response = response;
-    request.done(request);
+
+    if (request.done) {
+      request.done(request);
+    }
 
     this.onRequestDone(request);
   }
@@ -134,22 +149,24 @@ export class RequestsQueueCore {
    * @param {number} retriesDone Number of retries performed.
    * @returns {Promise<Record<string, any>>}
    */
-  async #getResponse(request, retriesDone = 0) {
-    const shouldRetryByConfig =
-      request.retryAfter !== null && request.retriesCount !== null;
-    const retryAfter = shouldRetryByConfig
-      ? retriesDone * request.retryAfter
+  async #getResponse(
+    request: RequestModel,
+    retriesDone: number = 0,
+  ): Promise<Record<string, any> | RequestModelError> {
+    const { retryAfter, retriesCount } = request;
+    const shouldRetryByConfig = retryAfter !== null && retriesCount !== null;
+    const retryAfterTimeout = shouldRetryByConfig
+      ? retriesDone * retryAfter
       : 0;
-    const response = await new Promise(resolve =>
-      setTimeout(
-        async () => resolve(await this.#makeRequest(request, retriesDone)),
-        retryAfter,
-      ),
+    const response: RequestModelError | Record<string, any> = await new Promise(
+      resolve =>
+        setTimeout(
+          async () => resolve(await this.#makeRequest(request, retriesDone)),
+          retryAfterTimeout,
+        ),
     );
     const shouldRetry =
-      shouldRetryByConfig &&
-      response.isError &&
-      retriesDone < request.retriesCount;
+      shouldRetryByConfig && response.isError && retriesDone < retriesCount;
 
     if (shouldRetry) {
       this.onRetry(request, retriesDone);
@@ -169,9 +186,12 @@ export class RequestsQueueCore {
    *
    * @param {RequestModel} request Request to be executed.
    * @param {number} retriesDone Number of retries performed.
-   * @returns {Promise<Record<string, any>>} Request result.
+   * @returns {Promise<Record<string, any> | RequestModelError>} Request result.
    */
-  async #makeRequest(request, retriesDone = 0) {
+  async #makeRequest(
+    request: RequestModel,
+    retriesDone: number = 0,
+  ): Promise<Record<string, any> | RequestModelError> {
     this.onRequestProgress(request, retriesDone);
 
     try {
@@ -196,7 +216,7 @@ export class RequestsQueueCore {
       if (this.#showErrors) {
         console.error(e);
       }
-      const error = {
+      const error: RequestModelError = {
         retriesDone,
         isError: true,
         details: e,
@@ -213,7 +233,7 @@ export class RequestsQueueCore {
    *
    * @param {number} timeout Timeout after which promise must be rejected.
    */
-  #throwTimeout(timeout) {
+  #throwTimeout(timeout: number): Promise<never> {
     return new Promise((_, r) => setTimeout(() => r(ERR_TIMEOUT), timeout));
   }
 
@@ -223,53 +243,59 @@ export class RequestsQueueCore {
   /**
    * @param {RequestModel} request
    */
-  onRequestAdd(request) {}
+  public onRequestAdd(request: RequestModel): void {}
 
   // 2
-  beforeRequestHandle() {}
+  public beforeRequestHandle(): void {}
 
   // 3
   /**
    * @param {RequestModel} request
    */
-  onRequestStartExecute(request) {}
+  public onRequestStartExecute(request: RequestModel): void {}
 
   // 4
   /**
    * @param {RequestModel} request
    * @param {number} retriesDone
    */
-  onRequestProgress(request, retriesDone) {}
+  public onRequestProgress(request: RequestModel, retriesDone: number): void {}
 
   // 5
   /**
    * @param {RequestModel} request
    * @param {number} retriesDone
    */
-  onRetry(request, retriesDone) {}
+  public onRetry(request: RequestModel, retriesDone: number): void {}
 
   // 6
   /**
    * @param {RequestModel} request
    */
-  onRequestFail(request) {}
+  public onRequestFail(request: RequestModel): void {}
   /**
    * @param {RequestModel} request
    */
-  onRequestSuccess(request) {}
+  public onRequestSuccess(request: RequestModel): void {}
 
   // 7
   /**
    * @param {RequestModel} request
    */
-  onRequestDone(request) {}
+  public onRequestDone(request: RequestModel): void {}
 
   // 8
-  afterRequestHandle() {}
+  public afterRequestHandle(): void {}
 
   // 9
-  onQueueEmpty() {}
+  public onQueueEmpty(): void {}
 }
+
+type RequestsQueueParams = {
+  logger?: QueueLogger;
+  storeManager?: QueueStoreManager;
+  showErrors?: boolean;
+};
 
 /**
  * Requests queue class.
@@ -278,11 +304,11 @@ export class RequestsQueue extends RequestsQueueCore {
   /**
    * @type {QueueLogger}
    */
-  #logger;
+  #logger: QueueLogger | null;
   /**
    * @type {QueueStoreManager}
    */
-  #storeManager;
+  #storeManager: QueueStoreManager | null;
 
   /**
    * Creates new instance of `RequestsQueue` class.
@@ -293,7 +319,7 @@ export class RequestsQueue extends RequestsQueueCore {
    *    showErrors?: boolean
    * }} params `RequestsQueue` parameters.
    */
-  constructor(params = {}) {
+  constructor(params: RequestsQueueParams = {}) {
     super({ showErrors: params.showErrors ?? true });
     this.#logger = params.logger ?? null;
     this.#storeManager = params.storeManager ?? null;
@@ -314,7 +340,7 @@ export class RequestsQueue extends RequestsQueueCore {
    *
    * @param {RequestModel} request
    */
-  onRequestAdd(request) {
+  onRequestAdd(request: RequestModel): void {
     this.save(unlink(this._queue));
     this.log('Request has been added to the queue', request);
   }
@@ -346,14 +372,14 @@ export class RequestsQueue extends RequestsQueueCore {
   /**
    * @param {RequestModel} request
    */
-  onRequestStartExecute(request) {
+  onRequestStartExecute(request: RequestModel) {
     this.log('New request starts executing', request);
   }
 
   /**
    * @param {RequestModel} request
    */
-  onRequestDone(request) {
+  onRequestDone(request: RequestModel) {
     this.log('Request result:', request);
   }
 
@@ -361,21 +387,21 @@ export class RequestsQueue extends RequestsQueueCore {
    * @param {RequestModel} request
    * @param {number} retriesDone
    */
-  onRetry(request, retriesDone) {
+  onRetry(request: RequestModel, retriesDone: number) {
     this.log(`Retrying: attempt ${retriesDone}`, request);
   }
 
   /**
    * @param {RequestModel} request
    */
-  onRequestFail(request) {
+  onRequestFail(request: RequestModel) {
     this.log('Request has been failed', request);
   }
 
   /**
    * @param {RequestModel} request
    */
-  onRequestSuccess(request) {
+  onRequestSuccess(request: RequestModel) {
     this.log('Request has been completed', request);
   }
 
@@ -383,7 +409,7 @@ export class RequestsQueue extends RequestsQueueCore {
    * @param {RequestModel} request
    * @param {number} retriesDone
    */
-  onRequestProgress(request, retriesDone) {
+  onRequestProgress(request: RequestModel, retriesDone: number) {
     this.log(`Request in progress: attempt ${retriesDone}`, request);
   }
 
@@ -394,7 +420,7 @@ export class RequestsQueue extends RequestsQueueCore {
    * @param  {...any} data Data to be logged.
    * @returns {void}
    */
-  log(...data) {
+  log(...data: any[]): void {
     if (!this.#logger) return;
     this.#logger.log(...data);
   }
@@ -405,7 +431,7 @@ export class RequestsQueue extends RequestsQueueCore {
    * @param {RequestModel[]} queue Queue to be stored.
    * @returns {void}
    */
-  save(queue) {
+  save(queue: RequestModel[]): void {
     if (!this.#storeManager) return;
     this.#storeManager.save(unlink(queue));
   }
@@ -413,9 +439,9 @@ export class RequestsQueue extends RequestsQueueCore {
   /**
    * Loads queue with `QueueStoreManager`.
    *
-   * @returns {{ actionPath: string, args: any[] }[]}
+   * @returns {BaseStoreData[]}
    */
-  load() {
+  load(): BaseStoreData[] | void | null {
     if (!this.#storeManager) return;
     return this.#storeManager.load();
   }
@@ -423,9 +449,9 @@ export class RequestsQueue extends RequestsQueueCore {
   /**
    * Restarts queue with `QueueStoreManager`.
    *
-   * @returns {Promise<any[] | undefined>}
+   * @returns {Promise<any[] | void>}
    */
-  async restart() {
+  async restart(): Promise<any[] | void> {
     if (!this.#storeManager) return;
     return await this.#storeManager.restart();
   }
