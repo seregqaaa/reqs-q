@@ -1,6 +1,6 @@
 {
   "name": "reqs-q",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "reqs-q is a simple and lightweight JavaScript library to help you control the order of requests",
   "keywords": [
     "requests queue",
@@ -23,9 +23,11 @@
   "main": "src/index.ts",
   "author": "Sergey Kvashnin <seregqaaa@gmail.com>",
   "license": "MIT",
+  "typings": "types/index.d.ts",
   "scripts": {
     "build": "node esbuild.config.js",
-    "dev": "node esbuild.config.js --watch"
+    "dev": "node esbuild.config.js --watch",
+    "type": "tsc -d --declarationMap --emitDeclarationOnly"
   },
   "devDependencies": {
     "@types/node": "^18.6.1",
