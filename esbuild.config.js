@@ -4,7 +4,7 @@ require('esbuild')
   .build({
     bundle: true,
     entryPoints: ['src/index.ts'],
-    outdir: 'dist',
+    outdir: '.',
     treeShaking: true,
     minifyIdentifiers: false,
     minifySyntax: true,
