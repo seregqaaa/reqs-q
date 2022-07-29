@@ -45,8 +45,8 @@ yarn add reqs-q
     RequestModel,
     QueueLogger,
     QueueStoreManager,
-    stores,
-    priorities,
+    Stores,
+    Priorities,
   } from 'reqs-q';
 
   function sendRequest(endpoint) {
@@ -55,7 +55,7 @@ yarn add reqs-q
       timeout: 5000,
       retryAfter: 2000,
       retriesCount: 3,
-      priority: priorities.high,
+      priority: Priorities.high,
       storeData: {
         actionPath: sendRequest.name,
         args: [...arguments],
@@ -72,7 +72,7 @@ yarn add reqs-q
   const myEndpoints = ['firstEndpoint', 'secondEndpoint'];
 
   const requestsQueue = new RequestsQueue({
-    logger: new QueueLogger({ saveLogs: true, showLogs: true }),
+    logger: new QueueLogger({ saveLogs: true, showLogs: false }),
 
     // using this feature may be not safe.
     storeManager: new QueueStoreManager({
